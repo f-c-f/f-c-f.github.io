@@ -1,15 +1,21 @@
 ---
 permalink: /
-title: "Academic Pages is a ready-to-fork GitHub Pages template for academic personal websites"
+title: "Personal Pages for Li Wangcai"
 author_profile: true
 redirect_from: 
   - /about/
   - /about.html
 ---
 
-This is the front page of a website that is powered by the [Academic Pages template](https://github.com/academicpages/academicpages.github.io) and hosted on GitHub pages. [GitHub pages](https://pages.github.com) is a free service in which websites are built and hosted from code and data stored in a GitHub repository, automatically updating when a new commit is made to the repository. This template was forked from the [Minimal Mistakes Jekyll Theme](https://mmistakes.github.io/minimal-mistakes/) created by Michael Rose, and then extended to support the kinds of content that academics have: publications, talks, teaching, a portfolio, blog posts, and a dynamically-generated CV. Incidentally, these same features make it a great template for anyone that needs to show off a professional template!
+I'm a doctor student from [School of software](https://soft.buaa.edu.cn),[Beihang university](https://www.buaa.edu.cn).My research interests include Model Driven Development, Model Testing Case Generation and AI Ai Assisted Model Development.
 
- You can fork [this template](https://github.com/academicpages/academicpages.github.io) right now, modify the configuration and Markdown files, add your own PDFs and other content, and have your own site for free, with no ads!
+I'm very fortunate to be advised by [Associate Pro.Su](https://suzcpp.github.io/ZhuoSu.html)from [School of software](https://soft.buaa.edu.cn),Beihang university. I was advised by [Prof. Wang]([https://XXX.pku.edu.cn/](http://www.xjtu.edu.cn/jsnr.jsp?wbtreeid=1632&wbwbxjtuteacherid=1593)) from [School of Computer Science and Technology](https://cs.pku.edu.cn/), [Xi'an jiaotong University]（http://www.xjtu.edu.cn）.
+
+You can find my CV here: [XX's Curriculum Vitae](../assets/Curriculum_Vitae.pdf).
+
+[Email](mailto:XX@stu.pku.edu.cn) / [Github](https://github.com/QiuDi233) / [Wechat](../images/wechat.jpg) / [CSDN](https://blog.csdn.net/qd1813100174?spm=1000.2115.3001.5343)
+
+
 
 A data-driven personal website
 ======
