@@ -9,7 +9,7 @@ redirect_from:
 
 I'm a doctor student from [School of software](https://soft.buaa.edu.cn),[Beihang university](https://www.buaa.edu.cn).My research interests include Model Driven Development, Model Testing Case Generation and AI Ai Assisted Model Development.
 
-I'm very fortunate to be advised by [Associate Pro.Su](https://suzcpp.github.io/ZhuoSu.html)from [School of software](https://soft.buaa.edu.cn),Beihang university. I was advised by [Prof. Wang](http://www.xjtu.edu.cn/jsnr.jsp?wbtreeid=1632&wbwbxjtuteacherid=1593)from [School of Computer Science and Technology](https://www.cs.xjtu.edu.cn), [Xi'an jiaotong University](http://www.xjtu.edu.cn).
+I'm very fortunate to be advised by [Associate Pro.Su] (https://suzcpp.github.io/ZhuoSu.html) from [School of software](https://soft.buaa.edu.cn),Beihang university. I was advised by [Prof. Wang ](http://www.xjtu.edu.cn/jsnr.jsp?wbtreeid=1632&wbwbxjtuteacherid=1593) from [School of Computer Science and Technology](https://www.cs.xjtu.edu.cn), [Xi'an jiaotong University](http://www.xjtu.edu.cn).
 
 You can find my CV here: [Li Wangcai's Curriculum Vitae](../assets/CV.pdf).
 
