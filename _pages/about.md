@@ -11,7 +11,7 @@ I'm a doctor student from [School of software](https://soft.buaa.edu.cn),[Beihan
 
 I'm very fortunate to be advised by [Associate Pro.Su](https://suzcpp.github.io/ZhuoSu.html)from [School of software](https://soft.buaa.edu.cn),Beihang university. I was advised by [Prof. Wang](http://www.xjtu.edu.cn/jsnr.jsp?wbtreeid=1632&wbwbxjtuteacherid=1593)from [School of Computer Science and Technology](https://www.cs.xjtu.edu.cn), [Xi'an jiaotong University](http://www.xjtu.edu.cn).
 
-You can find my CV here: [XX's Curriculum Vitae](../assets/CV.pdf).
+You can find my CV here: [Li Wangcai's Curriculum Vitae](../assets/CV.pdf).
 
 [Email](mailto:961024421@qq.com) / [Github](https://github.com/f-c-f) / [Wechat](../images/wechat.jpg) / [CSDN](https://blog.csdn.net/qq_45358498?spm=1008.2028.3001.5343)
 
