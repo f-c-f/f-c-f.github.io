@@ -11,10 +11,39 @@ redirect_from:
 
 Education
 ======
-* Ph.D in Version Control Theory, GitHub University, 2018 (expected)
-* M.S. in Jekyll, GitHub University, 2014
-* B.S. in GitHub, GitHub University, 2012
+* Ph.D in Hangzhou, Beihang University, 2025 (expected)
+* M.S. in Xi’an, Xi'an Jiaotong University, 2022
+* B.S. in Xi’an, Xi'an Jiaotong University, 2018
 
+Skills
+======
+* Writting
+* Code
+  * Python
+  * C++
+* Read
+* Model(learing)
+  
+Hobby
+======
+* Sports
+  * Basketball(favorite)
+  * Run
+  * Swimming
+* Reading
+  * Traditional Novels(like Liu Zhenyun,Lu Yao)
+  * Online novels
+  * Ancient Poetry
+* Stamp
+  * DIY
+  * Collection 
+
+
+Publications
+======
+* None
+
+<!--
 Work experience
 ======
 * Spring 2024: Academic Pages Collaborator
@@ -31,7 +60,7 @@ Work experience
   * GitHub University
   * Duties included: Tagging issues
   * Supervisor: Professor Git
-  
+
 Skills
 ======
 * Skill 1
@@ -62,3 +91,4 @@ Teaching
 Service and leadership
 ======
 * Currently signed in to 43 different slack teams
+-->
