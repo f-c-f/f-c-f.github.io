@@ -15,6 +15,10 @@ Education
 * M.S. in Xi’an, Xi'an Jiaotong University, 2022
 * B.S. in Xi’an, Xi'an Jiaotong University, 2018
 
+Publications
+======
+* None
+  
 Skills
 ======
 * Writting
@@ -39,9 +43,7 @@ Hobby
   * Collection 
 
 
-Publications
-======
-* None
+
 
 <!--
 Work experience
