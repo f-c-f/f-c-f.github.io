@@ -1,5 +1,5 @@
 ---
-title: "My First Journal Article"
+title: My First Journal Article
 collection: publications
 category: manuscripts
 permalink: /publication/2009-10-01-paper-title-number-1
