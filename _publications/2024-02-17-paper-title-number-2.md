@@ -1,7 +1,7 @@
 ---
 title: "My First Conference Paper"
 collection: publications
-category:books
+category: books
 permalink: /publication/2024-02-17-paper-title-number-4
 excerpt: 'This paper is about fixing template issue #693.'
 date: waiting
