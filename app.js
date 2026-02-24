@@ -5,9 +5,51 @@ let pieChart = null;   // 饼图实例
 let lineChart = null;  // 折线图实例
 let currentPage = 1;   // 当前页码
 const pageSize = 10;   // 每页显示记录数
+const PASSWORD = '123456'; // 密码（可根据需要修改）
 
 // 页面加载完成后初始化
 window.onload = function() {
+    // 初始化密码输入界面
+    initPasswordScreen();
+};
+
+// 初始化密码输入界面
+function initPasswordScreen() {
+    const passwordInput = document.getElementById('password-input');
+    const passwordSubmit = document.getElementById('password-submit');
+    const passwordError = document.getElementById('password-error');
+    const passwordScreen = document.getElementById('password-screen');
+    const container = document.querySelector('.container');
+    
+    // 绑定密码提交事件
+    passwordSubmit.addEventListener('click', function() {
+        const inputPassword = passwordInput.value.trim();
+        
+        if (inputPassword === PASSWORD) {
+            // 密码正确，显示主内容
+            passwordScreen.style.display = 'none';
+            container.style.display = 'block';
+            
+            // 初始化应用
+            initApp();
+        } else {
+            // 密码错误，显示错误信息
+            passwordError.textContent = '密码错误，请重新输入';
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    });
+    
+    // 绑定回车键事件
+    passwordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            passwordSubmit.click();
+        }
+    });
+}
+
+// 初始化应用
+function initApp() {
     // 等待Firebase初始化
     setTimeout(() => {
         // 加载数据

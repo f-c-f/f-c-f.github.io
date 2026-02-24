@@ -35,7 +35,18 @@
     </script>
 </head>
 <body>
-    <div class="container">
+    <!-- 密码输入界面 -->
+    <div id="password-screen" class="password-screen">
+        <div class="password-container">
+            <h1>请输入密码</h1>
+            <input type="password" id="password-input" placeholder="请输入密码">
+            <button id="password-submit">确认</button>
+            <p id="password-error" class="error-message"></p>
+        </div>
+    </div>
+    
+    <!-- 主内容区（默认隐藏） -->
+    <div class="container" style="display: none;">
         <h1>个人资产管理系统</h1>
         
         <!-- 时间区间选择 -->
