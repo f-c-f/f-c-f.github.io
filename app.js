@@ -5,48 +5,47 @@ let pieChart = null;   // 饼图实例
 let lineChart = null;  // 折线图实例
 let currentPage = 1;   // 当前页码
 const pageSize = 10;   // 每页显示记录数
-const PASSWORD = '123456'; // 密码（可根据需要修改）
 
 // 页面加载完成后初始化
 window.onload = function() {
-    // 初始化密码输入界面
-    initPasswordScreen();
+    // 检查登录状态和会话超时
+    if (!checkLoginStatus()) {
+        // 未登录或会话超时，跳转到登录页面
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    // 初始化应用
+    initApp();
+    
+    // 定期检查会话超时
+    setInterval(checkLoginStatus, 60000); // 每分钟检查一次
 };
 
-// 初始化密码输入界面
-function initPasswordScreen() {
-    const passwordInput = document.getElementById('password-input');
-    const passwordSubmit = document.getElementById('password-submit');
-    const passwordError = document.getElementById('password-error');
-    const passwordScreen = document.getElementById('password-screen');
-    const container = document.querySelector('.container');
+// 检查登录状态和会话超时
+function checkLoginStatus() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const loginTime = localStorage.getItem('loginTime');
     
-    // 绑定密码提交事件
-    passwordSubmit.addEventListener('click', function() {
-        const inputPassword = passwordInput.value.trim();
-        
-        if (inputPassword === PASSWORD) {
-            // 密码正确，显示主内容
-            passwordScreen.style.display = 'none';
-            container.style.display = 'block';
-            
-            // 初始化应用
-            initApp();
-        } else {
-            // 密码错误，显示错误信息
-            passwordError.textContent = '密码错误，请重新输入';
-            passwordInput.value = '';
-            passwordInput.focus();
-        }
-    });
+    if (!isLoggedIn || !loginTime) {
+        return false;
+    }
     
-    // 绑定回车键事件
-    passwordInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            passwordSubmit.click();
-        }
-    });
-}
+    // 检查是否超过3分钟（180000毫秒）
+    const currentTime = Date.now();
+    const loginTimestamp = parseInt(loginTime);
+    
+    if (currentTime - loginTimestamp > 180000) {
+        // 会话超时，清除登录状态
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('loginTime');
+        return false;
+    }
+    
+    // 更新登录时间，重置超时计时器
+    localStorage.setItem('loginTime', currentTime.toString());
+    return true;
+};
 
 // 初始化应用
 function initApp() {
@@ -65,6 +64,20 @@ function initApp() {
     document.getElementById('saveBtn').addEventListener('click', saveRecord);
     document.getElementById('periodSelect').addEventListener('change', toggleCustomDate);
     
+    // 绑定退出登录事件
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        console.log('找到退出登录按钮，绑定点击事件');
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('点击退出登录按钮');
+            logout();
+        });
+    } else {
+        console.log('未找到退出登录按钮');
+    }
+    
     // 监听资产输入变化，实时更新计算
     const assetInputs = document.querySelectorAll('.asset-input');
     assetInputs.forEach(input => {
@@ -75,6 +88,28 @@ function initApp() {
     });
     
     document.getElementById('inputIncome').addEventListener('input', updateCalculations);
+};
+
+// 退出登录
+function logout() {
+    // 使用window.confirm确保获取正确的返回值
+    var result = window.confirm('确定要退出登录吗？');
+    console.log('确认对话框返回值:', result);
+    
+    // 只有当用户点击确定时才执行退出操作
+    if (result === true) {
+        console.log('用户点击了确定，执行退出登录');
+        // 清除登录状态
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('loginTime');
+        // 跳转到登录页面
+        setTimeout(function() {
+            window.location.href = 'login.html';
+        }, 100);
+    } else {
+        console.log('用户点击了取消，不执行退出登录');
+        // 什么都不做，保持当前状态
+    }
 };
 
 // 切换自定义日期显示
@@ -199,7 +234,7 @@ function saveData() {
 
 // 更新计算结果
 function updateCalculations() {
-    // 计算当前总资产
+    // 计算当前总资产（从输入框实时计算）
     let assetCurrent = 0;
     const assetInputs = document.querySelectorAll('.asset-input');
     
@@ -238,10 +273,34 @@ function updateCalculations() {
         assetLast = lastStat.asset_current;
     }
     
-    // 计算资产净增长和消费
-    const assetDelta = assetCurrent - assetLast;
-    const inputIncome = parseFloat(document.getElementById('inputIncome').value) || 0;
-    const consumption = inputIncome - assetDelta;
+    // 计算资产净增长
+    let assetDelta = assetCurrent - assetLast;
+    
+    // 计算消费
+    let consumption = 0;
+    
+    // 如果有历史记录，使用历史记录中的消费数据
+    if (periodStats.length > 0) {
+        const lastStat = periodStats[periodStats.length - 1];
+        // 从历史记录中获取消费数据
+        consumption = lastStat.consumption || 0;
+    } else {
+        // 没有历史记录时，消费为0
+        consumption = 0;
+    }
+    
+    // 如果有至少两条历史记录，使用历史记录中的资产数据
+    if (periodStats.length >= 2) {
+        const lastStat = periodStats[periodStats.length - 1];
+        const prevStat = periodStats[periodStats.length - 2];
+        
+        // 上期总资产为上次保存的资产
+        assetLast = prevStat.asset_current;
+        // 当前总资产为本次保存的资产
+        assetCurrent = lastStat.asset_current;
+        // 重新计算资产净增长
+        assetDelta = assetCurrent - assetLast;
+    }
     
     // 更新界面显示
     document.getElementById('assetLast').textContent = assetLast.toFixed(2);
@@ -263,6 +322,77 @@ function updateResultColors(assetDelta, consumption) {
     
     // 消费颜色
     consumptionEl.style.color = consumption >= 0 ? '#e74c3c' : '#27ae60';
+}
+
+// 计算详细资产变动
+function calculateDetailedChanges(currentAssets) {
+    const detailedChanges = [];
+    
+    // 如果没有历史记录，返回空数组
+    if (periodStats.length === 0) {
+        return detailedChanges;
+    }
+    
+    // 获取上次的统计记录
+    const lastStat = periodStats[periodStats.length - 1];
+    
+    // 获取上次的资产记录
+    const lastAssets = assetRecords.filter(record => 
+        record.record_time === lastStat.period
+    );
+    
+    // 创建上次资产的映射，用于快速查找
+    const lastAssetsMap = {};
+    lastAssets.forEach(asset => {
+        const key = `${asset.platform}-${asset.category}-${asset.sub_category || 'null'}`;
+        lastAssetsMap[key] = asset.amount;
+    });
+    
+    // 遍历当前资产，计算变动
+    currentAssets.forEach(asset => {
+        const key = `${asset.platform}-${asset.category}-${asset.sub_category || 'null'}`;
+        const lastAmount = lastAssetsMap[key] || 0;
+        const currentAmount = asset.amount;
+        const delta = currentAmount - lastAmount;
+        
+        if (delta !== 0) {
+            detailedChanges.push({
+                platform: asset.platform,
+                category: asset.category,
+                sub_category: asset.sub_category,
+                last_amount: lastAmount,
+                current_amount: currentAmount,
+                delta: delta
+            });
+        }
+    });
+    
+    // 检查是否有资产被删除
+    Object.keys(lastAssetsMap).forEach(key => {
+        const [platform, category, subCategory] = key.split('-');
+        const subCategoryClean = subCategory === 'null' ? null : subCategory;
+        
+        // 检查当前资产中是否存在该记录
+        const exists = currentAssets.some(asset => 
+            asset.platform === platform &&
+            asset.category === category &&
+            asset.sub_category === subCategoryClean
+        );
+        
+        if (!exists) {
+            const lastAmount = lastAssetsMap[key];
+            detailedChanges.push({
+                platform: platform,
+                category: category,
+                sub_category: subCategoryClean,
+                last_amount: lastAmount,
+                current_amount: 0,
+                delta: -lastAmount
+            });
+        }
+    });
+    
+    return detailedChanges;
 }
 
 // 更新资产变动明细
@@ -318,6 +448,34 @@ function updateAssetChanges() {
         
         assetChangesEl.appendChild(changeEl);
     });
+    
+    // 显示详细资产变动
+    if (lastStat.detailed_changes && lastStat.detailed_changes.length > 0) {
+        const detailedTitle = document.createElement('h3');
+        detailedTitle.textContent = '详细资产变动';
+        detailedTitle.style.marginTop = '15px';
+        detailedTitle.style.marginBottom = '10px';
+        assetChangesEl.appendChild(detailedTitle);
+        
+        lastStat.detailed_changes.forEach(change => {
+            const changeEl = document.createElement('div');
+            changeEl.className = `change-item ${change.delta >= 0 ? 'change-positive' : 'change-negative'}`;
+            changeEl.style.fontSize = '14px';
+            changeEl.style.padding = '5px 10px';
+            
+            const deltaText = change.delta >= 0 ? `+${change.delta.toFixed(2)}` : change.delta.toFixed(2);
+            const name = change.sub_category ? `${change.category} - ${change.sub_category}` : change.category;
+            
+            changeEl.innerHTML = `
+                <strong>${change.platform} - ${name}：</strong>
+                上次 ${change.last_amount.toFixed(2)} 元 → 
+                当前 ${change.current_amount.toFixed(2)} 元 → 
+                变动 ${deltaText} 元
+            `;
+            
+            assetChangesEl.appendChild(changeEl);
+        });
+    }
 }
 
 // 获取指定平台在指定时间的资产总额
@@ -634,15 +792,14 @@ function saveRecord() {
             return;
         }
         
-        if (amount > 0) {
-            currentAssets.push({
-                platform: input.dataset.platform,
-                category: input.dataset.category,
-                sub_category: input.dataset.subcategory || null,
-                amount: amount,
-                record_time: new Date().toISOString()
-            });
-        }
+        // 保存所有资产记录，包括金额为0的记录
+        currentAssets.push({
+            platform: input.dataset.platform,
+            category: input.dataset.category,
+            sub_category: input.dataset.subcategory || null,
+            amount: amount,
+            record_time: new Date().toISOString()
+        });
     });
     
     // 计算当前总资产（排除理财通明细，避免重复计算）
@@ -663,10 +820,23 @@ function saveRecord() {
     
     // 计算资产净增长和消费
     const assetDelta = assetCurrent - assetLast;
-    const consumption = inputIncome - assetDelta;
+    let consumption = 0;
+    
+    // 只有当有历史记录时才计算消费
+    if (periodStats.length > 0) {
+        consumption = inputIncome - assetDelta;
+        // 处理浮点数精度问题，当消费的绝对值小于0.01时，视为0
+        consumption = Math.abs(consumption) < 0.01 ? 0 : consumption;
+    } else {
+        // 第一次记录时，消费为0（因为没有上次资产作为参考）
+        consumption = 0;
+    }
     
     // 保存资产记录
     assetRecords = [...assetRecords, ...currentAssets];
+    
+    // 计算详细资产变动
+    const detailedChanges = calculateDetailedChanges(currentAssets);
     
     // 保存期间统计
     periodStats.push({
@@ -675,6 +845,7 @@ function saveRecord() {
         asset_current: assetCurrent,
         asset_delta: assetDelta,
         consumption: consumption,
+        detailed_changes: detailedChanges,
         period: new Date().toISOString()
     });
     

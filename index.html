@@ -35,18 +35,17 @@
     </script>
 </head>
 <body>
-    <!-- 密码输入界面 -->
-    <div id="password-screen" class="password-screen">
-        <div class="password-container">
-            <h1>请输入密码</h1>
-            <input type="password" id="password-input" placeholder="请输入密码">
-            <button id="password-submit">确认</button>
-            <p id="password-error" class="error-message"></p>
-        </div>
-    </div>
-    
-    <!-- 主内容区（默认隐藏） -->
-    <div class="container" style="display: none;">
+    <!-- 主内容区 -->
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="index.html" class="nav-btn active">记账</a>
+                <a href="diary/index.html" class="nav-btn">日记</a>
+                <button id="logout-btn" class="nav-btn logout">退出登录</button>
+            </div>
+        </nav>
+        
         <h1>个人资产管理系统</h1>
         
         <!-- 时间区间选择 -->

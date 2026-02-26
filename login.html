@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码验证</title>
+    <style>
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        /* 密码输入界面样式 */
+        .password-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .password-container h1 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        #password-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        #password-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        #password-submit:hover {
+            background-color: #2980b9;
+        }
+        
+        .error-message {
+            margin-top: 15px;
+            color: #e74c3c;
+            font-size: 14px;
+        }
+        
+        .password-container input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="password-container">
+        <h1>请输入密码</h1>
+        <input type="password" id="password-input" placeholder="请输入密码">
+        <button id="password-submit">确认</button>
+        <p id="password-error" class="error-message"></p>
+    </div>
+    
+    <script>
+        const PASSWORD = '123456'; // 统一密码
+        
+        // 页面加载完成后初始化
+        window.onload = function() {
+            // 检查是否已经登录
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                // 已登录，跳转到记账页面
+                window.location.href = 'index.html';
+            }
+            
+            // 绑定密码提交事件
+            document.getElementById('password-submit').addEventListener('click', verifyPassword);
+            
+            // 绑定回车键事件
+            document.getElementById('password-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+        };
+        
+        // 验证密码
+        function verifyPassword() {
+            const inputPassword = document.getElementById('password-input').value.trim();
+            const passwordError = document.getElementById('password-error');
+            
+            if (inputPassword === PASSWORD) {
+                // 密码正确，设置登录状态和登录时间
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loginTime', Date.now().toString());
+                // 跳转到记账页面
+                window.location.href = 'index.html';
+            } else {
+                // 密码错误，显示错误信息
+                passwordError.textContent = '密码错误，请重新输入';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+            }
+        }
+    </script>
+</body>
+</html>
