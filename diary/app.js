@@ -45,8 +45,11 @@ function checkLoginStatus() {
 
 // 初始化应用
 function initApp() {
-    // 加载日记数据
-    loadDiaries();
+    // 等待Firebase初始化
+    setTimeout(() => {
+        // 加载日记数据
+        loadDiaries();
+    }, 1000);
     
     // 绑定事件监听器
     document.getElementById('save-diary').addEventListener('click', saveDiary);
@@ -104,18 +107,48 @@ function logout() {
 
 // 加载日记数据
 function loadDiaries() {
-    const savedDiaries = localStorage.getItem('diaries');
-    if (savedDiaries) {
-        diaries = JSON.parse(savedDiaries);
-        // 按日期降序排序
-        diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-    renderDiaryList();
+    // 等待Firebase初始化
+    setTimeout(() => {
+        if (window.firebase) {
+            const { database, ref, get } = window.firebase;
+            const diariesRef = ref(database, 'diaries');
+            
+            get(diariesRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    diaries = snapshot.val();
+                    // 确保diaries是数组
+                    if (!Array.isArray(diaries)) {
+                        diaries = [];
+                    }
+                    // 按日期降序排序
+                    diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
+                } else {
+                    diaries = [];
+                }
+                renderDiaryList();
+            }).catch((error) => {
+                console.error('Error loading diaries:', error);
+                diaries = [];
+                renderDiaryList();
+            });
+        } else {
+            console.error('Firebase not initialized');
+            diaries = [];
+            renderDiaryList();
+        }
+    }, 1000);
 }
 
-// 保存日记数据到本地存储
+// 保存日记数据到Firebase
 function saveDiaries() {
-    localStorage.setItem('diaries', JSON.stringify(diaries));
+    if (window.firebase) {
+        const { database, ref, set } = window.firebase;
+        const diariesRef = ref(database, 'diaries');
+        
+        set(diariesRef, diaries).catch((error) => {
+            console.error('Error saving diaries:', error);
+        });
+    }
 }
 
 // 保存新日记
