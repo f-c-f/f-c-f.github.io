@@ -80,8 +80,39 @@ function initApp() {
     });
     
     // 设置默认日期为今天
-    document.getElementById('diary-date').valueAsDate = new Date();
+    const diaryDate = document.getElementById('diary-date');
+    diaryDate.valueAsDate = new Date();
+    
+    // 自动生成默认标题
+    updateDefaultTitle();
+    
+    // 监听日期变化，更新默认标题
+    diaryDate.addEventListener('change', updateDefaultTitle);
+    
+    // 监听标题输入，当用户开始输入时不再自动填充
+    const diaryTitle = document.getElementById('diary-title');
+    diaryTitle.addEventListener('input', function() {
+        this.dataset.userInput = 'true';
+    });
 };
+
+// 更新默认标题
+function updateDefaultTitle() {
+    const diaryTitle = document.getElementById('diary-title');
+    
+    // 只有当用户还没有输入标题时，才自动填充默认标题
+    if (!diaryTitle.dataset.userInput && !diaryTitle.value.trim()) {
+        const currentDate = new Date(); // 使用当前时间
+        const defaultTitle = currentDate.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) + ' 的日记';
+        diaryTitle.value = defaultTitle;
+    }
+}
 
 // 退出登录
 function logout() {
@@ -174,9 +205,14 @@ function saveDiary() {
     renderDiaryList();
     
     // 清空输入表单
-    document.getElementById('diary-title').value = '';
+    const diaryTitle = document.getElementById('diary-title');
+    diaryTitle.value = '';
+    delete diaryTitle.dataset.userInput; // 清除用户输入标记
     document.getElementById('diary-content').value = '';
     document.getElementById('diary-date').valueAsDate = new Date();
+    
+    // 重新生成默认标题
+    updateDefaultTitle();
     
     alert('日记保存成功！');
 }
