@@ -32,6 +32,9 @@
         // Make Firebase available globally
         window.firebase = { app, database, ref, set, get, onValue };
     </script>
+    
+    <!-- 农历库 -->
+    <script src="https://cdn.jsdelivr.net/npm/lunar-calendar@0.1.4/dist/LunarCalendar.min.js"></script>
 
 </head>
 <body>
@@ -46,6 +49,14 @@
         </nav>
         
         <h1>个人日记</h1>
+        
+        <!-- 万年历区域 -->
+        <div class="calendar">
+            <h2>万年历</h2>
+            <div id="calendar-content">
+                <!-- 万年历内容将通过JavaScript动态生成 -->
+            </div>
+        </div>
         
         <!-- 日记输入区域 -->
         <div class="diary-input">
@@ -68,6 +79,12 @@
         <!-- 日记列表区域 -->
         <div class="diary-list">
             <h2>日记列表</h2>
+            <div class="date-filter">
+                <label for="filter-date">按日查看：</label>
+                <input type="date" id="filter-date">
+                <button id="filter-btn">查看</button>
+                <button id="reset-btn">重置</button>
+            </div>
             <div id="diary-entries">
                 <!-- 日记条目将通过JavaScript动态生成 -->
             </div>

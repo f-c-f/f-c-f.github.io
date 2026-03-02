@@ -111,6 +111,39 @@ h3 {
     text-decoration: underline;
 }
 
+/* 万年历区域样式 */
+.calendar {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#calendar-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.calendar-item {
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    padding: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.calendar-item strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #34495e;
+}
+
+.calendar-item span {
+    color: #7f8c8d;
+}
+
 /* 日记输入区域样式 */
 .diary-input {
     background-color: white;
@@ -166,6 +199,56 @@ h3 {
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 日期过滤区域样式 */
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+}
+
+.date-filter label {
+    font-weight: bold;
+    color: #555;
+}
+
+.date-filter input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.date-filter button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#filter-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+#filter-btn:hover {
+    background-color: #2980b9;
+}
+
+#reset-btn {
+    background-color: #95a5a6;
+    color: white;
+}
+
+#reset-btn:hover {
+    background-color: #7f8c8d;
 }
 
 #diary-entries {
