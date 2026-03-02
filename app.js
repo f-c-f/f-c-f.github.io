@@ -49,11 +49,8 @@ function checkLoginStatus() {
 
 // 初始化应用
 function initApp() {
-    // 等待Firebase初始化
-    setTimeout(() => {
-        // 加载数据
-        loadData();
-    }, 1000);
+    // 直接加载数据，不等待
+    loadData();
     
     // 其他初始化操作
     setupFinanceTotalListener();
@@ -166,6 +163,11 @@ function setupFinanceTotalListener() {
 function loadData() {
     if (!window.firebase) {
         console.error('Firebase not initialized');
+        fillLatestAssetData();
+        updateCalculations();
+        updateAssetChanges();
+        updateCharts();
+        updateHistoryTable();
         return;
     }
     
@@ -175,7 +177,9 @@ function loadData() {
     const assetRecordsRef = ref(database, 'assetRecords');
     get(assetRecordsRef).then((snapshot) => {
         if (snapshot.exists()) {
-            assetRecords = snapshot.val();
+            const data = snapshot.val();
+            // 确保assetRecords是一个数组
+            assetRecords = Array.isArray(data) ? data : [];
         } else {
             assetRecords = [];
         }
@@ -184,27 +188,32 @@ function loadData() {
         const periodStatsRef = ref(database, 'periodStats');
         get(periodStatsRef).then((snapshot) => {
             if (snapshot.exists()) {
-                periodStats = snapshot.val();
+                const data = snapshot.val();
+                // 确保periodStats是一个数组
+                periodStats = Array.isArray(data) ? data : [];
             } else {
                 periodStats = [];
             }
-            
+        }).catch((error) => {
+            console.error('Error loading periodStats:', error);
+            periodStats = [];
+        }).finally(() => {
             // 数据加载完成后更新界面
             fillLatestAssetData();
             updateCalculations();
             updateAssetChanges();
             updateCharts();
             updateHistoryTable();
-        }).catch((error) => {
-            console.error('Error loading periodStats:', error);
-            periodStats = [];
-            updateCalculations();
         });
     }).catch((error) => {
         console.error('Error loading assetRecords:', error);
         assetRecords = [];
         periodStats = [];
+        fillLatestAssetData();
         updateCalculations();
+        updateAssetChanges();
+        updateCharts();
+        updateHistoryTable();
     });
 }
 
@@ -684,10 +693,68 @@ function updateHistoryTable() {
             <td>${salaryCardAmount.toFixed(2)}</td>
             <td>${stat.input_income.toFixed(2)}</td>
             <td>${stat.consumption.toFixed(2)}</td>
-            <td><button class="btn-delete" data-index="${originalIndex}">删除</button></td>
+            <td>
+                <button class="btn-expand" data-index="${originalIndex}">展开</button>
+                <button class="btn-delete" data-index="${originalIndex}">删除</button>
+            </td>
         `;
         
         tableBody.appendChild(row);
+        
+        // 创建展开的详细信息行
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'detail-row';
+        detailRow.style.display = 'none';
+        detailRow.setAttribute('data-index', originalIndex);
+        
+        // 生成详细资产构成HTML
+        let detailHTML = '<td colspan="8"><div class="asset-details">';
+        
+        if (stat.asset_details && stat.asset_details.length > 0) {
+            // 按平台分组显示
+            const platforms = {};
+            stat.asset_details.forEach(asset => {
+                if (!platforms[asset.platform]) {
+                    platforms[asset.platform] = [];
+                }
+                platforms[asset.platform].push(asset);
+            });
+            
+            Object.keys(platforms).forEach(platform => {
+                detailHTML += `<h4>${platform}</h4>`;
+                detailHTML += '<div class="platform-details">';
+                
+                platforms[platform].forEach(asset => {
+                    const category = asset.sub_category ? `${asset.category} - ${asset.sub_category}` : asset.category;
+                    detailHTML += `<div class="asset-item-detail">${category}：${asset.amount.toFixed(2)} 元</div>`;
+                });
+                
+                detailHTML += '</div>';
+            });
+        } else {
+            detailHTML += '<p>暂无详细资产构成信息</p>';
+        }
+        
+        detailHTML += '</div></td>';
+        detailRow.innerHTML = detailHTML;
+        tableBody.appendChild(detailRow);
+    });
+    
+    // 绑定展开/收起按钮点击事件
+    const expandBtns = document.querySelectorAll('.btn-expand');
+    expandBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            const detailRow = document.querySelector(`.detail-row[data-index="${index}"]`);
+            
+            if (detailRow.style.display === 'none') {
+                detailRow.style.display = 'table-row';
+                this.textContent = '收起';
+            } else {
+                detailRow.style.display = 'none';
+                this.textContent = '展开';
+            }
+        });
     });
     
     // 更新分页信息
@@ -734,47 +801,117 @@ function deleteRecord(index) {
 
 // 填充最新资产数据
 function fillLatestAssetData() {
-    if (assetRecords.length === 0) {
-        return; // 没有资产记录，直接返回
+    console.log('开始填充最新资产数据');
+    console.log('periodStats长度:', periodStats.length);
+    console.log('assetRecords长度:', assetRecords.length);
+    
+    // 尝试从最近的periodStats记录中获取资产构成详细信息
+    if (periodStats.length > 0) {
+        console.log('有periodStats记录');
+        // 按时间倒序排序，获取最新的记录
+        const sortedStats = [...periodStats].sort((a, b) => new Date(b.period) - new Date(a.period));
+        const latestStat = sortedStats[0];
+        console.log('最新的periodStats记录:', latestStat);
+        
+        // 检查是否有资产构成详细信息
+        if (latestStat.asset_details && latestStat.asset_details.length > 0) {
+            console.log('有asset_details，长度:', latestStat.asset_details.length);
+            console.log('asset_details内容:', latestStat.asset_details);
+            // 遍历所有资产输入框
+            const assetInputs = document.querySelectorAll('.asset-input');
+            console.log('资产输入框数量:', assetInputs.length);
+            assetInputs.forEach(input => {
+                const platform = input.dataset.platform;
+                const category = input.dataset.category;
+                const subcategory = input.dataset.subcategory || null; // 与保存时保持一致，转换为null
+                console.log('处理输入框:', platform, category, subcategory);
+                
+                // 查找匹配的资产记录
+                const matchedRecord = latestStat.asset_details.find(record => {
+                    const recordSubCategory = record.sub_category === undefined ? null : record.sub_category;
+                    return record.platform === platform && 
+                           record.category === category && 
+                           recordSubCategory === subcategory;
+                });
+                
+                console.log('匹配的记录:', matchedRecord);
+                // 如果找到匹配的记录，填充金额；否则填充0
+                if (matchedRecord) {
+                    input.value = matchedRecord.amount.toFixed(2);
+                    console.log('填充金额:', matchedRecord.amount.toFixed(2));
+                } else {
+                    input.value = '0.00';
+                    console.log('填充0.00');
+                }
+            });
+            
+            // 更新计算
+            updateWechatFinanceDetail();
+            console.log('从periodStats填充完成');
+            return;
+        } else {
+            console.log('没有asset_details');
+        }
     }
     
-    // 按时间分组，获取所有唯一的记录时间
-    const uniqueTimes = [...new Set(assetRecords.map(record => record.record_time))];
-    
-    // 按时间倒序排序，获取最新的记录时间
-    uniqueTimes.sort((a, b) => new Date(b) - new Date(a));
-    const latestTime = uniqueTimes[0];
-    
-    // 获取最新时间点的所有资产记录
-    const latestRecords = assetRecords.filter(record => record.record_time === latestTime);
-    
-    // 遍历所有资产输入框
-    const assetInputs = document.querySelectorAll('.asset-input');
-    assetInputs.forEach(input => {
-        const platform = input.dataset.platform;
-        const category = input.dataset.category;
-        const subcategory = input.dataset.subcategory;
+    // 如果没有periodStats记录或没有asset_details，尝试从assetRecords中获取
+    if (assetRecords.length > 0) {
+        console.log('从assetRecords获取');
+        // 按时间分组，获取所有唯一的记录时间
+        const uniqueTimes = [...new Set(assetRecords.map(record => record.record_time))];
+        console.log('唯一时间点:', uniqueTimes);
         
-        // 查找匹配的资产记录
-        const matchedRecord = latestRecords.find(record => {
-            return record.platform === platform && 
-                   record.category === category && 
-                   record.sub_category === subcategory;
+        // 按时间倒序排序，获取最新的记录时间
+        uniqueTimes.sort((a, b) => new Date(b) - new Date(a));
+        const latestTime = uniqueTimes[0];
+        console.log('最新时间:', latestTime);
+        
+        // 获取最新时间点的所有资产记录
+        const latestRecords = assetRecords.filter(record => record.record_time === latestTime);
+        console.log('最新时间的记录:', latestRecords);
+        
+        // 遍历所有资产输入框
+        const assetInputs = document.querySelectorAll('.asset-input');
+        assetInputs.forEach(input => {
+            const platform = input.dataset.platform;
+            const category = input.dataset.category;
+            const subcategory = input.dataset.subcategory || null; // 与保存时保持一致，转换为null
+            
+            // 查找匹配的资产记录
+            const matchedRecord = latestRecords.find(record => {
+                const recordSubCategory = record.sub_category === undefined ? null : record.sub_category;
+                return record.platform === platform && 
+                       record.category === category && 
+                       recordSubCategory === subcategory;
+            });
+            
+            // 如果找到匹配的记录，填充金额；否则填充0
+            if (matchedRecord) {
+                input.value = matchedRecord.amount.toFixed(2);
+            } else {
+                input.value = '0.00';
+            }
         });
-        
-        // 如果找到匹配的记录，填充金额
-        if (matchedRecord) {
-            input.value = matchedRecord.amount.toFixed(2);
-        }
-    });
+    } else {
+        console.log('没有任何记录，填充0');
+        // 如果没有任何记录，将所有输入框填充为0
+        const assetInputs = document.querySelectorAll('.asset-input');
+        assetInputs.forEach(input => {
+            input.value = '0.00';
+        });
+    }
     
     // 更新计算
     updateWechatFinanceDetail();
+    console.log('填充完成');
 }
 
 // 保存记录后更新历史记录下拉列表
 function saveRecord() {
     const inputIncome = parseFloat(document.getElementById('inputIncome').value) || 0;
+    
+    // 生成统一的时间戳，确保资产记录和统计记录使用相同的时间
+    const recordTime = new Date().toISOString();
     
     // 收集当前资产数据
     const currentAssets = [];
@@ -794,11 +931,11 @@ function saveRecord() {
         
         // 保存所有资产记录，包括金额为0的记录
         currentAssets.push({
-            platform: input.dataset.platform,
-            category: input.dataset.category,
-            sub_category: input.dataset.subcategory || null,
+            platform: platform,
+            category: category,
+            sub_category: subcategory || null,
             amount: amount,
-            record_time: new Date().toISOString()
+            record_time: recordTime
         });
     });
     
@@ -846,7 +983,8 @@ function saveRecord() {
         asset_delta: assetDelta,
         consumption: consumption,
         detailed_changes: detailedChanges,
-        period: new Date().toISOString()
+        asset_details: currentAssets, // 存储完整的资产构成详细信息
+        period: recordTime
     });
     
     // 保存到localStorage
