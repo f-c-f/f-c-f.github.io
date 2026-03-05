@@ -65,6 +65,23 @@
                 <label for="diary-title">标题：</label>
                 <input type="text" id="diary-title" placeholder="请输入日记标题">
             </div>
+            <div class="form-group tag-group">
+                <label>标签：</label>
+                <div class="tag-selector">
+                    <label class="tag-option">
+                        <input type="radio" name="diary-tag" value="待办" checked>
+                        待办
+                    </label>
+                    <label class="tag-option">
+                        <input type="radio" name="diary-tag" value="日记">
+                        日记
+                    </label>
+                    <label class="tag-option">
+                        <input type="radio" name="diary-tag" value="知识">
+                        知识
+                    </label>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="diary-content">内容：</label>
                 <div class="editor-toolbar">
@@ -144,11 +161,22 @@
         <!-- 日记列表区域 -->
         <div class="diary-list">
             <h2>日记列表</h2>
-            <div class="date-filter">
-                <label for="filter-date">按日查看：</label>
-                <input type="date" id="filter-date">
-                <button id="filter-btn">查看</button>
-                <button id="reset-btn">重置</button>
+            <div class="filter-container">
+                <div class="date-filter">
+                    <label for="filter-date">按日查看：</label>
+                    <input type="date" id="filter-date">
+                    <button id="filter-btn">查看</button>
+                </div>
+                <div class="date-filter">
+                    <label for="tag-filter">按标签筛选：</label>
+                    <select id="tag-filter">
+                        <option value="all">全部</option>
+                        <option value="待办">待办</option>
+                        <option value="日记">日记</option>
+                        <option value="知识">知识</option>
+                    </select>
+                    <button id="reset-btn">重置</button>
+                </div>
             </div>
             <div id="diary-entries">
                 <!-- 日记条目将通过JavaScript动态生成 -->
@@ -163,6 +191,23 @@
                 <div class="form-group">
                     <label for="edit-title">标题：</label>
                     <input type="text" id="edit-title">
+                </div>
+                <div class="form-group tag-group">
+                    <label>标签：</label>
+                    <div class="tag-selector">
+                        <label class="tag-option">
+                            <input type="radio" name="edit-tag" value="待办">
+                            待办
+                        </label>
+                        <label class="tag-option">
+                            <input type="radio" name="edit-tag" value="日记">
+                            日记
+                        </label>
+                        <label class="tag-option">
+                            <input type="radio" name="edit-tag" value="知识">
+                            知识
+                        </label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="edit-content">内容：</label>

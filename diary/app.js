@@ -142,6 +142,9 @@ async function initApp() {
     // 绑定日期过滤按钮点击事件
     document.getElementById('filter-btn').addEventListener('click', filterDiariesByDate);
     document.getElementById('reset-btn').addEventListener('click', resetFilter);
+    
+    // 绑定标签筛选事件
+    document.getElementById('tag-filter').addEventListener('change', renderDiaryList);
 };
 
 // 获取农历日期
@@ -409,6 +412,7 @@ function saveDiary() {
     const title = document.getElementById('diary-title').value.trim();
     const content = document.getElementById('diary-content').innerHTML.trim();
     const date = document.getElementById('diary-date').value;
+    const tag = document.querySelector('input[name="diary-tag"]:checked').value;
     
     if (!title || !content || !date) {
         alert('请填写完整的日记信息');
@@ -419,7 +423,8 @@ function saveDiary() {
         id: Date.now().toString(),
         title: title,
         content: content,
-        date: date
+        date: date,
+        tag: tag
     };
     
     diaries.unshift(newDiary); // 添加到数组开头
@@ -432,6 +437,7 @@ function saveDiary() {
     delete diaryTitle.dataset.userInput; // 清除用户输入标记
     document.getElementById('diary-content').innerHTML = '';
     document.getElementById('diary-date').valueAsDate = new Date();
+    document.querySelector('input[name="diary-tag"][value="待办"]').checked = true;
     
     // 重新生成默认标题
     updateDefaultTitle();
@@ -445,8 +451,16 @@ function renderDiaryList() {
     
     // 过滤日记列表
     let filteredDiaries = diaries;
+    
+    // 按日期过滤
     if (currentFilterDate) {
-        filteredDiaries = diaries.filter(diary => diary.date === currentFilterDate);
+        filteredDiaries = filteredDiaries.filter(diary => diary.date === currentFilterDate);
+    }
+    
+    // 按标签过滤
+    const tagFilter = document.getElementById('tag-filter').value;
+    if (tagFilter !== 'all') {
+        filteredDiaries = filteredDiaries.filter(diary => diary.tag === tagFilter);
     }
     
     if (filteredDiaries.length === 0) {
@@ -469,8 +483,12 @@ function renderDiaryList() {
         // 格式化日期显示
         const formattedDate = new Date(diary.date).toLocaleDateString('zh-CN');
         
+        // 获取标签，如果没有标签则默认为"日记"
+        const tag = diary.tag || '日记';
+        
         diaryEl.innerHTML = `
             <h4>${diary.title}</h4>
+            <span class="tag ${tag}">${tag}</span>
             <div class="date">${formattedDate}</div>
             <div class="content">${diary.content}</div>
             <div class="actions">
@@ -493,6 +511,10 @@ function editDiary(index) {
     document.getElementById('edit-content').innerHTML = diary.content;
     document.getElementById('edit-date').value = diary.date;
     
+    // 设置标签
+    const tag = diary.tag || '待办';
+    document.querySelector(`input[name="edit-tag"][value="${tag}"]`).checked = true;
+    
     // 显示编辑模态框
     document.getElementById('edit-modal').style.display = 'block';
 }
@@ -502,6 +524,7 @@ function updateDiary() {
     const title = document.getElementById('edit-title').value.trim();
     const content = document.getElementById('edit-content').innerHTML.trim();
     const date = document.getElementById('edit-date').value;
+    const tag = document.querySelector('input[name="edit-tag"]:checked').value;
     
     if (!title || !content || !date) {
         alert('请填写完整的日记信息');
@@ -512,7 +535,8 @@ function updateDiary() {
         ...diaries[currentEditIndex],
         title: title,
         content: content,
-        date: date
+        date: date,
+        tag: tag
     };
     
     // 重新排序
@@ -546,10 +570,11 @@ function filterDiariesByDate() {
     renderDiaryList();
 }
 
-// 重置日期过滤
+// 重置过滤
 function resetFilter() {
     document.getElementById('filter-date').value = '';
     currentFilterDate = null;
+    document.getElementById('tag-filter').value = 'all';
     renderDiaryList();
 }
 

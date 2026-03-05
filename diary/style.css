@@ -271,6 +271,115 @@ h3 {
     font-size: 14px;
 }
 
+/* 标签选择器样式 */
+.tag-selector {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+/* 标签选择器的表单组样式 */
+.form-group.tag-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.form-group.tag-group label {
+    display: inline-block;
+    font-weight: bold;
+    color: #555;
+    margin-right: 10px;
+    margin-bottom: 0;
+}
+
+/* 其他表单组样式 */
+.form-group:not(.tag-group) label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group:not(.tag-group) input[type="text"],
+.form-group:not(.tag-group) input[type="date"] {
+    width: 100%;
+}
+
+.tag-option {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.tag-option input[type="radio"] {
+    accent-color: #3498db;
+}
+
+/* 筛选器容器样式 */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+}
+
+.date-filter input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 150px;
+}
+
+.date-filter select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 120px;
+}
+
+/* 标签显示样式 */
+.tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.tag.待办 {
+    background-color: #e8f5e8;
+    color: #27ae60;
+}
+
+.tag.日记 {
+    background-color: #e3f2fd;
+    color: #2196f3;
+}
+
+.tag.知识 {
+    background-color: #f3e5f5;
+    color: #9c27b0;
+}
+
 .form-group textarea {
     resize: vertical;
     min-height: 150px;
