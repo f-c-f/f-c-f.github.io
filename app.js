@@ -693,6 +693,7 @@ function updateHistoryTable() {
             <td>${salaryCardAmount.toFixed(2)}</td>
             <td>${stat.input_income.toFixed(2)}</td>
             <td>${stat.consumption.toFixed(2)}</td>
+            <td>${stat.note || '-'}</td>
             <td>
                 <button class="btn-expand" data-index="${originalIndex}">展开</button>
                 <button class="btn-delete" data-index="${originalIndex}">删除</button>
@@ -708,7 +709,12 @@ function updateHistoryTable() {
         detailRow.setAttribute('data-index', originalIndex);
         
         // 生成详细资产构成HTML
-        let detailHTML = '<td colspan="8"><div class="asset-details">';
+        let detailHTML = '<td colspan="9"><div class="asset-details">';
+        
+        // 显示备注信息
+        if (stat.note) {
+            detailHTML += `<div class="asset-note"><strong>备注：</strong>${stat.note}</div>`;
+        }
         
         if (stat.asset_details && stat.asset_details.length > 0) {
             // 按平台分组显示
@@ -909,6 +915,7 @@ function fillLatestAssetData() {
 // 保存记录后更新历史记录下拉列表
 function saveRecord() {
     const inputIncome = parseFloat(document.getElementById('inputIncome').value) || 0;
+    const assetNote = document.getElementById('asset-note').value.trim();
     
     // 生成统一的时间戳，确保资产记录和统计记录使用相同的时间
     const recordTime = new Date().toISOString();
@@ -984,6 +991,7 @@ function saveRecord() {
         consumption: consumption,
         detailed_changes: detailedChanges,
         asset_details: currentAssets, // 存储完整的资产构成详细信息
+        note: assetNote, // 资产备注信息
         period: recordTime
     });
     
