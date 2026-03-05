@@ -131,8 +131,8 @@
         window.onload = function() {
             // 检查是否已经登录
             if (localStorage.getItem('isLoggedIn') === 'true') {
-                // 已登录，跳转到记账页面
-                window.location.href = 'index.html';
+                // 已登录，跳转到日记页面
+                window.location.href = 'diary/index.html';
                 return;
             }
             
@@ -159,8 +159,8 @@
                 // 密码正确，设置登录状态和登录时间
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('loginTime', Date.now().toString());
-                // 跳转到记账页面
-                window.location.href = 'index.html';
+                // 跳转到日记页面
+                window.location.href = 'diary/index.html';
             } else {
                 // 密码错误，显示错误信息
                 passwordError.textContent = '密码错误，请重新输入';

@@ -67,7 +67,72 @@
             </div>
             <div class="form-group">
                 <label for="diary-content">内容：</label>
-                <textarea id="diary-content" placeholder="请输入日记内容" rows="10"></textarea>
+                <div class="editor-toolbar">
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('undo', false, null)" title="撤销">
+                        <span class="toolbar-icon">↶</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('redo', false, null)" title="重做">
+                        <span class="toolbar-icon">↷</span>
+                    </button>
+                    <span class="toolbar-separator"></span>
+                    <select class="toolbar-select" onchange="document.execCommand('formatBlock', false, this.value)">
+                        <option value="p">正文</option>
+                        <option value="h1">标题1</option>
+                        <option value="h2">标题2</option>
+                        <option value="h3">标题3</option>
+                    </select>
+
+                    <select class="toolbar-select" onchange="document.execCommand('fontSize', false, this.value)">
+                        <option value="1">一号</option>
+                        <option value="2">二号</option>
+                        <option value="3">三号</option>
+                        <option value="4">四号</option>
+                        <option value="5" selected>五号</option>
+                        <option value="6">六号</option>
+                        <option value="7">七号</option>
+                    </select>
+                    <span class="toolbar-separator"></span>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('bold', false, null)" title="粗体">
+                        <span class="toolbar-icon">B</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('italic', false, null)" title="斜体">
+                        <span class="toolbar-icon">I</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('underline', false, null)" title="下划线">
+                        <span class="toolbar-icon">__</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('strikeThrough', false, null)" title="删除线">
+                        <span class="toolbar-icon">—</span>
+                    </button>
+                    <span class="toolbar-separator"></span>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyLeft', false, null)" title="左对齐">
+                        <span class="toolbar-icon">≡</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyCenter', false, null)" title="居中对齐">
+                        <span class="toolbar-icon">|≡|</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyRight', false, null)" title="右对齐">
+                        <span class="toolbar-icon">≡</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyFull', false, null)" title="两端对齐">
+                        <span class="toolbar-icon">≡|≡</span>
+                    </button>
+                    <span class="toolbar-separator"></span>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('insertOrderedList', false, null)" title="有序列表">
+                        <span class="toolbar-icon">1.</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('insertUnorderedList', false, null)" title="无序列表">
+                        <span class="toolbar-icon">•</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('outdent', false, null)" title="减少缩进">
+                        <span class="toolbar-icon">←</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" onclick="document.execCommand('indent', false, null)" title="增加缩进">
+                        <span class="toolbar-icon">→</span>
+                    </button>
+                </div>
+                <div id="diary-content" class="content-editor" contenteditable="true" placeholder="请输入日记内容"></div>
+                <input type="hidden" id="diary-content-hidden">
             </div>
             <div class="form-group">
                 <label for="diary-date">日期：</label>
@@ -101,7 +166,72 @@
                 </div>
                 <div class="form-group">
                     <label for="edit-content">内容：</label>
-                    <textarea id="edit-content" rows="10"></textarea>
+                    <div class="editor-toolbar">
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('undo', false, null)" title="撤销">
+                            <span class="toolbar-icon">↶</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('redo', false, null)" title="重做">
+                            <span class="toolbar-icon">↷</span>
+                        </button>
+                        <span class="toolbar-separator"></span>
+                        <select class="toolbar-select" onchange="document.execCommand('formatBlock', false, this.value)">
+                            <option value="p">正文</option>
+                            <option value="h1">标题1</option>
+                            <option value="h2">标题2</option>
+                            <option value="h3">标题3</option>
+                        </select>
+
+                        <select class="toolbar-select" onchange="document.execCommand('fontSize', false, this.value)">
+                            <option value="1">一号</option>
+                            <option value="2">二号</option>
+                            <option value="3">三号</option>
+                            <option value="4">四号</option>
+                            <option value="5" selected>五号</option>
+                            <option value="6">六号</option>
+                            <option value="7">七号</option>
+                        </select>
+                        <span class="toolbar-separator"></span>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('bold', false, null)" title="粗体">
+                            <span class="toolbar-icon">B</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('italic', false, null)" title="斜体">
+                            <span class="toolbar-icon">I</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('underline', false, null)" title="下划线">
+                            <span class="toolbar-icon">__</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('strikeThrough', false, null)" title="删除线">
+                            <span class="toolbar-icon">—</span>
+                        </button>
+                        <span class="toolbar-separator"></span>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyLeft', false, null)" title="左对齐">
+                            <span class="toolbar-icon">≡</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyCenter', false, null)" title="居中对齐">
+                            <span class="toolbar-icon">|≡|</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyRight', false, null)" title="右对齐">
+                            <span class="toolbar-icon">≡</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyFull', false, null)" title="两端对齐">
+                            <span class="toolbar-icon">≡|≡</span>
+                        </button>
+                        <span class="toolbar-separator"></span>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('insertOrderedList', false, null)" title="有序列表">
+                            <span class="toolbar-icon">1.</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('insertUnorderedList', false, null)" title="无序列表">
+                            <span class="toolbar-icon">•</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('outdent', false, null)" title="减少缩进">
+                            <span class="toolbar-icon">←</span>
+                        </button>
+                        <button type="button" class="toolbar-btn" onclick="document.execCommand('indent', false, null)" title="增加缩进">
+                            <span class="toolbar-icon">→</span>
+                        </button>
+                    </div>
+                    <div id="edit-content" class="content-editor" contenteditable="true"></div>
+                    <input type="hidden" id="edit-content-hidden">
                 </div>
                 <div class="form-group">
                     <label for="edit-date">日期：</label>

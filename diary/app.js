@@ -407,7 +407,7 @@ function saveDiaries() {
 // 保存新日记
 function saveDiary() {
     const title = document.getElementById('diary-title').value.trim();
-    const content = document.getElementById('diary-content').value.trim();
+    const content = document.getElementById('diary-content').innerHTML.trim();
     const date = document.getElementById('diary-date').value;
     
     if (!title || !content || !date) {
@@ -430,7 +430,7 @@ function saveDiary() {
     const diaryTitle = document.getElementById('diary-title');
     diaryTitle.value = '';
     delete diaryTitle.dataset.userInput; // 清除用户输入标记
-    document.getElementById('diary-content').value = '';
+    document.getElementById('diary-content').innerHTML = '';
     document.getElementById('diary-date').valueAsDate = new Date();
     
     // 重新生成默认标题
@@ -490,7 +490,7 @@ function editDiary(index) {
     
     // 填充编辑表单
     document.getElementById('edit-title').value = diary.title;
-    document.getElementById('edit-content').value = diary.content;
+    document.getElementById('edit-content').innerHTML = diary.content;
     document.getElementById('edit-date').value = diary.date;
     
     // 显示编辑模态框
@@ -500,7 +500,7 @@ function editDiary(index) {
 // 更新日记
 function updateDiary() {
     const title = document.getElementById('edit-title').value.trim();
-    const content = document.getElementById('edit-content').value.trim();
+    const content = document.getElementById('edit-content').innerHTML.trim();
     const date = document.getElementById('edit-date').value;
     
     if (!title || !content || !date) {
