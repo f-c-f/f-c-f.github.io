@@ -2,6 +2,7 @@
 let diaries = [];
 let currentEditIndex = -1;
 let currentFilterDate = null;
+let showCompletedTodos = false;
 
 // 页面加载完成后初始化
 window.onload = async function() {
@@ -145,6 +146,16 @@ async function initApp() {
     
     // 绑定标签筛选事件
     document.getElementById('tag-filter').addEventListener('change', renderDiaryList);
+    
+    // 绑定显示/隐藏已完成待办事项按钮事件
+    const toggleCompletedBtn = document.getElementById('toggle-completed');
+    if (toggleCompletedBtn) {
+        toggleCompletedBtn.addEventListener('click', function() {
+            showCompletedTodos = !showCompletedTodos;
+            this.textContent = showCompletedTodos ? '隐藏已完成待办' : '显示已完成待办';
+            renderDiaryList();
+        });
+    }
 };
 
 // 获取农历日期
@@ -359,6 +370,56 @@ function renderDiaryList() {
     const tagFilter = document.getElementById('tag-filter').value;
     if (tagFilter !== 'all') {
         filteredDiaries = filteredDiaries.filter(diary => diary.tag === tagFilter);
+    }
+    
+    // 过滤已完成的待办事项
+    if (!showCompletedTodos) {
+        filteredDiaries = filteredDiaries.filter(diary => {
+            // 只处理待办事项
+            if (diary.tag !== '待办') {
+                return true;
+            }
+            
+            // 检查内容是否全部被画上了删除线
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = diary.content;
+            
+            // 获取所有文本节点
+            const textNodes = [];
+            function getAllTextNodes(node) {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                    textNodes.push(node);
+                } else {
+                    for (let child of node.childNodes) {
+                        getAllTextNodes(child);
+                    }
+                }
+            }
+            getAllTextNodes(tempDiv);
+            
+            // 如果没有文本节点，视为未完成
+            if (textNodes.length === 0) {
+                return true;
+            }
+            
+            // 检查每个文本节点是否在带有删除线的元素中
+            const allStrikethrough = textNodes.every(node => {
+                let parent = node.parentElement;
+                while (parent) {
+                    if (parent.style.textDecoration === 'line-through' || 
+                        parent.style.textDecorationLine === 'line-through' ||
+                        parent.tagName === 'S' ||
+                        parent.tagName === 'STRIKE') {
+                        return true;
+                    }
+                    parent = parent.parentElement;
+                }
+                return false;
+            });
+            
+            // 如果不是全部被删除线，则显示
+            return !allStrikethrough;
+        });
     }
     
     if (filteredDiaries.length === 0) {
