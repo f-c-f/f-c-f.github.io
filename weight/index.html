@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体重记录</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="../index.html" class="nav-btn">记账</a>
+                <a href="../diary/index.html" class="nav-btn">日记</a>
+                <a href="../video/index.html" class="nav-btn">视频</a>
+                <a href="index.html" class="nav-btn active">体重记录</a>
+                <button id="logout-btn" class="nav-btn logout">退出登录</button>
+            </div>
+        </nav>
+        
+        <h1>体重记录</h1>
+        
+        <!-- 目标体重设置 -->
+        <div class="goal-setting">
+            <h2>目标体重设置</h2>
+            <div class="form-group">
+                <label for="goal-weight">目标体重 (kg)：</label>
+                <input type="number" id="goal-weight" step="0.1" min="0">
+                <button id="save-goal">保存目标</button>
+            </div>
+            <div class="current-goal">
+                <p>当前目标体重：<span id="current-goal">未设置</span> kg</p>
+            </div>
+        </div>
+        
+        <!-- 体重记录表单 -->
+        <div class="weight-form">
+            <h2>添加体重记录</h2>
+            <div class="form-group">
+                <label for="weight-date">日期：</label>
+                <input type="date" id="weight-date">
+            </div>
+            <div class="form-group">
+                <label for="weight-value">体重 (kg)：</label>
+                <input type="number" id="weight-value" step="0.1" min="0">
+            </div>
+            <div class="form-group">
+                <label for="weight-note">备注：</label>
+                <input type="text" id="weight-note" placeholder="可选">
+            </div>
+            <button id="save-weight">保存记录</button>
+        </div>
+        
+        <!-- 体重变化图表 -->
+        <div class="weight-chart">
+            <h2>体重变化趋势</h2>
+            <div class="chart-container">
+                <canvas id="weightChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 体重记录表格 -->
+        <div class="weight-table">
+            <h2>体重记录历史</h2>
+            <div class="table-container">
+                <table id="weightTable">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>体重 (kg)</th>
+                            <th>变化 (kg)</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 表格数据将通过JavaScript动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
