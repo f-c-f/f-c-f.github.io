@@ -58,8 +58,10 @@ function initApp() {
     // 绑定保存体重记录事件
     document.getElementById('save-weight').addEventListener('click', saveWeightRecord);
     
-    // 设置默认日期为今天
-    document.getElementById('weight-date').valueAsDate = new Date();
+    // 设置默认日期时间为当前时间
+    const now = new Date();
+    const formattedNow = now.toISOString().slice(0, 16); // 格式化为 YYYY-MM-DDTHH:MM
+    document.getElementById('weight-date').value = formattedNow;
     
     // 加载数据
     loadData();
@@ -275,8 +277,18 @@ function updateWeightTable() {
         const changeClass = change > 0 ? 'change-positive' : change < 0 ? 'change-negative' : '';
         const changeText = change > 0 ? `+${change.toFixed(1)}` : change.toFixed(1);
         
+        // 格式化日期时间显示
+        const dateTime = new Date(record.date);
+        const formattedDateTime = dateTime.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
         row.innerHTML = `
-            <td>${record.date}</td>
+            <td>${formattedDateTime}</td>
             <td>${record.weight.toFixed(1)}</td>
             <td class="${changeClass}">${changeText}</td>
             <td>${record.note || '-'}</td>
@@ -355,7 +367,15 @@ function initChart() {
 function updateChart() {
     if (!weightChart) return;
     
-    const labels = weightRecords.map(record => record.date);
+    const labels = weightRecords.map(record => {
+        const dateTime = new Date(record.date);
+        return dateTime.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    });
     const data = weightRecords.map(record => record.weight);
     
     weightChart.data.labels = labels;

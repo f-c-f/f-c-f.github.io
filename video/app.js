@@ -129,6 +129,11 @@ function renderVideoList() {
         `;
         videoEntries.appendChild(videoEl);
     });
+    
+    // 自动播放第一个视频
+    if (videos.length > 0) {
+        playVideo(videos[0].url, videos[0].name);
+    }
 }
 
 // 播放视频
@@ -140,9 +145,11 @@ function playVideo(url, name) {
     videoPlayer.src = url;
     videoTitle.textContent = name;
     
-    // 播放视频
-    videoPlayer.play().catch(error => {
-        console.error('播放视频时出错:', error);
-        alert('播放视频时出错，请检查视频文件是否存在');
-    });
+    // 视频加载完成后暂停
+    videoPlayer.onloadedmetadata = function() {
+        videoPlayer.pause();
+    };
+    
+    // 尝试加载视频
+    videoPlayer.load();
 }

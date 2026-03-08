@@ -61,6 +61,9 @@ function initApp() {
     document.getElementById('saveBtn').addEventListener('click', saveRecord);
     document.getElementById('periodSelect').addEventListener('change', toggleCustomDate);
     
+    // 初始化历史记录比较功能
+    setupCompareFunctionality();
+    
     // 绑定退出登录事件
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -1098,4 +1101,259 @@ function importData(file) {
     };
     
     reader.readAsText(file);
+}
+
+// 初始化历史记录比较功能
+function setupCompareFunctionality() {
+    // 绑定比较按钮点击事件
+    document.getElementById('compare-btn').addEventListener('click', compareRecords);
+    
+    // 填充历史记录选择框
+    updateCompareSelects();
+}
+
+// 填充历史记录选择框
+function updateCompareSelects() {
+    const fromSelect = document.getElementById('compare-from');
+    const toSelect = document.getElementById('compare-to');
+    
+    // 清空选择框
+    fromSelect.innerHTML = '';
+    toSelect.innerHTML = '';
+    
+    // 按时间倒序排序
+    const sortedStats = [...periodStats].sort((a, b) => new Date(b.period) - new Date(a.period));
+    
+    // 填充选择框
+    sortedStats.forEach((stat, index) => {
+        const date = new Date(stat.period);
+        const dateStr = date.toLocaleString('zh-CN');
+        
+        // 创建选项
+        const fromOption = document.createElement('option');
+        fromOption.value = index;
+        fromOption.textContent = dateStr;
+        fromSelect.appendChild(fromOption);
+        
+        const toOption = document.createElement('option');
+        toOption.value = index;
+        toOption.textContent = dateStr;
+        toSelect.appendChild(toOption);
+    });
+    
+    // 默认选择最新的两条记录
+    if (sortedStats.length >= 2) {
+        fromSelect.value = 1; // 第二条记录
+        toSelect.value = 0;   // 第一条记录
+    } else if (sortedStats.length >= 1) {
+        fromSelect.value = 0;
+        toSelect.value = 0;
+    }
+}
+
+// 比较两条历史记录
+function compareRecords() {
+    const fromIndex = parseInt(document.getElementById('compare-from').value);
+    const toIndex = parseInt(document.getElementById('compare-to').value);
+    
+    // 按时间倒序排序
+    const sortedStats = [...periodStats].sort((a, b) => new Date(b.period) - new Date(a.period));
+    
+    const fromStat = sortedStats[fromIndex];
+    const toStat = sortedStats[toIndex];
+    
+    if (!fromStat || !toStat) {
+        alert('请选择有效的历史记录');
+        return;
+    }
+    
+    const resultEl = document.getElementById('compare-result');
+    
+    // 计算总资产变化
+    const totalAssetChange = toStat.asset_current - fromStat.asset_current;
+    const totalAssetChangePercent = fromStat.asset_current > 0 ? (totalAssetChange / fromStat.asset_current) * 100 : 0;
+    
+    // 计算各平台资产变化
+    const platforms = ['微信', '支付宝', '工资卡'];
+    const platformChanges = [];
+    
+    platforms.forEach(platform => {
+        const fromAmount = getPlatformAmount(fromStat.period, platform);
+        const toAmount = getPlatformAmount(toStat.period, platform);
+        const change = toAmount - fromAmount;
+        const changePercent = fromAmount > 0 ? (change / fromAmount) * 100 : 0;
+        
+        platformChanges.push({
+            name: platform,
+            fromAmount: fromAmount,
+            toAmount: toAmount,
+            change: change,
+            changePercent: changePercent
+        });
+    });
+    
+    // 生成比较结果HTML
+    let resultHTML = `
+        <div class="compare-result">
+            <h3>比较结果</h3>
+            <div class="compare-item">
+                <strong>比较期间：</strong>
+                ${new Date(fromStat.period).toLocaleString('zh-CN')} 到 ${new Date(toStat.period).toLocaleString('zh-CN')}
+            </div>
+            <div class="compare-item">
+                <strong>总资产变化：</strong>
+                从 ${fromStat.asset_current.toFixed(2)} 元 → 到 ${toStat.asset_current.toFixed(2)} 元 → 
+                <span class="${totalAssetChange >= 0 ? 'change-positive' : 'change-negative'}">
+                    ${totalAssetChange >= 0 ? '+' : ''}${totalAssetChange.toFixed(2)} 元 (${totalAssetChangePercent >= 0 ? '+' : ''}${totalAssetChangePercent.toFixed(1)}%)
+                </span>
+            </div>
+    `;
+    
+    // 添加各平台变化
+    platformChanges.forEach(change => {
+        resultHTML += `
+            <div class="compare-item">
+                <strong>${change.name}变化：</strong>
+                从 ${change.fromAmount.toFixed(2)} 元 → 到 ${change.toAmount.toFixed(2)} 元 → 
+                <span class="${change.change >= 0 ? 'change-positive' : 'change-negative'}">
+                    ${change.change >= 0 ? '+' : ''}${change.change.toFixed(2)} 元 (${change.changePercent >= 0 ? '+' : ''}${change.changePercent.toFixed(1)}%)
+                </span>
+            </div>
+        `;
+    });
+    
+    resultHTML += `</div>`;
+    
+    resultEl.innerHTML = resultHTML;
+}
+
+// 在更新历史记录表格后更新比较选择框
+function updateHistoryTable() {
+    const tableBody = document.querySelector('#historyTable tbody');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
+    
+    // 清空表格内容
+    tableBody.innerHTML = '';
+    
+    // 按时间倒序排序
+    const sortedStats = [...periodStats].sort((a, b) => new Date(b.period) - new Date(a.period));
+    
+    // 计算分页
+    const totalPages = Math.ceil(sortedStats.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageData = sortedStats.slice(startIndex, endIndex);
+    
+    // 填充表格数据
+    pageData.forEach((stat, index) => {
+        const row = document.createElement('tr');
+        const date = new Date(stat.period);
+        const dateStr = date.toLocaleString('zh-CN');
+        
+        // 计算各平台金额
+        const wechatAmount = getPlatformAmount(stat.period, '微信');
+        const alipayAmount = getPlatformAmount(stat.period, '支付宝');
+        const salaryCardAmount = getPlatformAmount(stat.period, '工资卡');
+        
+        // 获取元素在原始periodStats数组中的索引
+        const originalIndex = periodStats.indexOf(stat);
+        
+        row.innerHTML = `
+            <td>${dateStr}</td>
+            <td>${stat.asset_current.toFixed(2)}</td>
+            <td>${wechatAmount.toFixed(2)}</td>
+            <td>${alipayAmount.toFixed(2)}</td>
+            <td>${salaryCardAmount.toFixed(2)}</td>
+            <td>${stat.input_income.toFixed(2)}</td>
+            <td>${stat.consumption.toFixed(2)}</td>
+            <td>${stat.note || '-'}</td>
+            <td>
+                <button class="btn-expand" data-index="${originalIndex}">展开</button>
+                <button class="btn-delete" data-index="${originalIndex}">删除</button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+        
+        // 创建展开的详细信息行
+        const detailRow = document.createElement('tr');
+        detailRow.className = 'detail-row';
+        detailRow.style.display = 'none';
+        detailRow.setAttribute('data-index', originalIndex);
+        
+        // 生成详细资产构成HTML
+        let detailHTML = '<td colspan="9"><div class="asset-details">';
+        
+        // 显示备注信息
+        if (stat.note) {
+            detailHTML += `<div class="asset-note"><strong>备注：</strong>${stat.note}</div>`;
+        }
+        
+        if (stat.asset_details && stat.asset_details.length > 0) {
+            // 按平台分组显示
+            const platforms = {};
+            stat.asset_details.forEach(asset => {
+                if (!platforms[asset.platform]) {
+                    platforms[asset.platform] = [];
+                }
+                platforms[asset.platform].push(asset);
+            });
+            
+            Object.keys(platforms).forEach(platform => {
+                detailHTML += `<h4>${platform}</h4>`;
+                detailHTML += '<div class="platform-details">';
+                
+                platforms[platform].forEach(asset => {
+                    const category = asset.sub_category ? `${asset.category} - ${asset.sub_category}` : asset.category;
+                    detailHTML += `<div class="asset-item-detail">${category}：${asset.amount.toFixed(2)} 元</div>`;
+                });
+                
+                detailHTML += '</div>';
+            });
+        } else {
+            detailHTML += '<p>暂无详细资产构成信息</p>';
+        }
+        
+        detailHTML += '</div></td>';
+        detailRow.innerHTML = detailHTML;
+        tableBody.appendChild(detailRow);
+    });
+    
+    // 绑定展开/收起按钮点击事件
+    const expandBtns = document.querySelectorAll('.btn-expand');
+    expandBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            const detailRow = document.querySelector(`.detail-row[data-index="${index}"]`);
+            
+            if (detailRow.style.display === 'none') {
+                detailRow.style.display = 'table-row';
+                this.textContent = '收起';
+            } else {
+                detailRow.style.display = 'none';
+                this.textContent = '展开';
+            }
+        });
+    });
+    
+    // 更新分页信息
+    pageInfo.textContent = `第 ${currentPage} 页，共 ${totalPages} 页`;
+    
+    // 更新分页按钮状态
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
+    
+    // 绑定删除按钮点击事件
+    const deleteBtns = document.querySelectorAll('.btn-delete');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const index = parseInt(this.dataset.index);
+            deleteRecord(index);
+        });
+    });
+    
+    // 更新比较选择框
+    updateCompareSelects();
 }
