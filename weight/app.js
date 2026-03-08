@@ -83,6 +83,57 @@ function logout() {
 
 // 加载数据
 function loadData() {
+    // 先从Firebase加载数据
+    if (window.firebase) {
+        const db = window.firebase.database;
+        const userRef = window.firebase.ref(db, 'users/user1');
+        
+        window.firebase.get(userRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                const userData = snapshot.val();
+                
+                // 加载目标体重
+                if (userData.weightGoal) {
+                    goalWeight = parseFloat(userData.weightGoal);
+                    document.getElementById('current-goal').textContent = goalWeight;
+                    document.getElementById('goal-weight').value = goalWeight;
+                    // 同时更新本地存储
+                    localStorage.setItem('goalWeight', goalWeight.toString());
+                }
+                
+                // 加载体重记录
+                if (userData.weightRecords) {
+                    weightRecords = userData.weightRecords;
+                    // 按日期排序
+                    weightRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    // 同时更新本地存储
+                    localStorage.setItem('weightRecords', JSON.stringify(weightRecords));
+                }
+            } else {
+                // 如果Firebase没有数据，从本地存储加载
+                loadFromLocalStorage();
+            }
+            
+            // 更新表格和图表
+            updateWeightTable();
+            updateChart();
+        }).catch((error) => {
+            console.error('Error loading data from Firebase:', error);
+            // 加载失败时从本地存储加载
+            loadFromLocalStorage();
+            updateWeightTable();
+            updateChart();
+        });
+    } else {
+        // 如果Firebase不可用，从本地存储加载
+        loadFromLocalStorage();
+        updateWeightTable();
+        updateChart();
+    }
+}
+
+// 从本地存储加载数据
+function loadFromLocalStorage() {
     // 加载目标体重
     const savedGoal = localStorage.getItem('goalWeight');
     if (savedGoal) {
@@ -98,21 +149,32 @@ function loadData() {
         // 按日期排序
         weightRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
     }
-    
-    // 更新表格和图表
-    updateWeightTable();
-    updateChart();
 }
 
 // 保存数据
 function saveData() {
-    // 保存目标体重
+    // 保存到本地存储
     if (goalWeight) {
         localStorage.setItem('goalWeight', goalWeight.toString());
     }
-    
-    // 保存体重记录
     localStorage.setItem('weightRecords', JSON.stringify(weightRecords));
+    
+    // 保存到Firebase
+    if (window.firebase) {
+        const db = window.firebase.database;
+        const userRef = window.firebase.ref(db, 'users/user1');
+        
+        const userData = {
+            weightGoal: goalWeight,
+            weightRecords: weightRecords
+        };
+        
+        window.firebase.set(userRef, userData).then(() => {
+            console.log('Data saved to Firebase successfully');
+        }).catch((error) => {
+            console.error('Error saving data to Firebase:', error);
+        });
+    }
 }
 
 // 保存目标体重
