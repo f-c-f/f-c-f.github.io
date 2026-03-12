@@ -485,6 +485,18 @@ h3 {
     line-height: 1.5;
 }
 
+/* 日记列表中的有序/无序列表，保持合理缩进 */
+.diary-entry .content ul,
+.diary-entry .content ol {
+    margin: 10px 0 10px 24px;
+    padding-left: 8px;
+    list-style-position: outside;
+}
+
+.diary-entry .content li {
+    margin: 4px 0;
+}
+
 .diary-entry .actions {
     display: flex;
     gap: 10px;

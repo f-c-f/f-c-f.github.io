@@ -105,8 +105,39 @@
         </div>
     </div>
     
+    <!-- Firebase SDK（用于从云端获取密码） -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
+            authDomain: "moneybase-bf6ec.firebaseapp.com",
+            databaseURL: "https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "moneybase-bf6ec",
+            storageBucket: "moneybase-bf6ec.firebasestorage.app",
+            messagingSenderId: "821348432254",
+            appId: "1:821348432254:web:7d5b062906f63011135b2f",
+            measurementId: "G-Y7WJ8DTGXV"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { database: getDatabase(app), ref, get };
+    </script>
     <script>
-        const PASSWORD = '123456'; // 统一密码
+        // 从 Firebase 读取密码，路径：config/loginPassword
+        const PASSWORD_PATH = 'config/loginPassword';
+        
+        async function getCloudPassword() {
+            if (!window.firebase) return null;
+            try {
+                const db = window.firebase.database;
+                const passwordRef = window.firebase.ref(db, PASSWORD_PATH);
+                const snapshot = await window.firebase.get(passwordRef);
+                return snapshot.exists() ? String(snapshot.val()).trim() : null;
+            } catch (e) {
+                console.error('获取云端密码失败:', e);
+                return null;
+            }
+        }
         
         // 加载封面图片
         function loadCoverImage() {
@@ -150,22 +181,37 @@
             });
         };
         
-        // 验证密码
-        function verifyPassword() {
+        // 验证密码（从云端获取密码后对比）
+        async function verifyPassword() {
             const inputPassword = document.getElementById('password-input').value.trim();
             const passwordError = document.getElementById('password-error');
+            const submitBtn = document.getElementById('password-submit');
             
-            if (inputPassword === PASSWORD) {
-                // 密码正确，设置登录状态和登录时间
+            if (!inputPassword) {
+                passwordError.textContent = '请输入密码';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            passwordError.textContent = '验证中...';
+            
+            const cloudPassword = await getCloudPassword();
+            
+            if (cloudPassword === null) {
+                passwordError.textContent = '无法获取云端密码，请检查网络或 Firebase 配置';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            if (inputPassword === cloudPassword) {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('loginTime', Date.now().toString());
-                // 跳转到日记页面
                 window.location.href = 'diary/index.html';
             } else {
-                // 密码错误，显示错误信息
                 passwordError.textContent = '密码错误，请重新输入';
                 document.getElementById('password-input').value = '';
                 document.getElementById('password-input').focus();
+                submitBtn.disabled = false;
             }
         }
     </script>
