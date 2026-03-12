@@ -85,11 +85,8 @@ async function loadCalendar() {
 
 // 初始化应用
 async function initApp() {
-    // 等待Firebase初始化
-    setTimeout(() => {
-        // 加载日记数据
-        loadDiaries();
-    }, 1000);
+    loadDiaries(); // 本地缓存立即可用
+    if (!window.firebase) setTimeout(loadDiaries, 500); // 等待 Firebase 初始化后再同步云端
     
     // 绑定事件监听器
     document.getElementById('save-diary').addEventListener('click', saveDiary);
@@ -270,49 +267,47 @@ function logout() {
     }
 };
 
-// 加载日记数据
+const DIARIES_CACHE_KEY = 'diaries_cache';
+
+// 加载日记数据（本地优先秒开，云端静默同步）
 function loadDiaries() {
-    // 等待Firebase初始化
-    setTimeout(() => {
-        if (window.firebase) {
-            const { database, ref, get } = window.firebase;
-            const diariesRef = ref(database, 'diaries');
-            
-            get(diariesRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    diaries = snapshot.val();
-                    // 确保diaries是数组
-                    if (!Array.isArray(diaries)) {
-                        diaries = [];
-                    }
-                    // 按日期降序排序
-                    diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
-                } else {
-                    diaries = [];
-                }
-                renderDiaryList();
-            }).catch((error) => {
-                console.error('Error loading diaries:', error);
-                diaries = [];
-                renderDiaryList();
-            });
-        } else {
-            console.error('Firebase not initialized');
-            diaries = [];
+    // 1. 优先从本地缓存加载，立即渲染
+    const cached = localStorage.getItem(DIARIES_CACHE_KEY);
+    if (cached) {
+        try {
+            const data = JSON.parse(cached);
+            diaries = Array.isArray(data) ? data : [];
+            diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
             renderDiaryList();
+        } catch (_) { diaries = []; }
+    } else {
+        diaries = [];
+        renderDiaryList();
+    }
+    
+    // 2. 后台从 Firebase 拉取并同步
+    if (!window.firebase) return;
+    
+    const { database, ref, get } = window.firebase;
+    get(ref(database, 'diaries')).then((snapshot) => {
+        if (snapshot.exists()) {
+            diaries = snapshot.val();
+            if (!Array.isArray(diaries)) diaries = [];
+            diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
         }
-    }, 1000);
+        renderDiaryList();
+    }).catch((e) => {
+        console.error('Error loading diaries:', e);
+    });
 }
 
-// 保存日记数据到Firebase
+// 保存日记数据到本地+云端
 function saveDiaries() {
+    localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
     if (window.firebase) {
         const { database, ref, set } = window.firebase;
-        const diariesRef = ref(database, 'diaries');
-        
-        set(diariesRef, diaries).catch((error) => {
-            console.error('Error saving diaries:', error);
-        });
+        set(ref(database, 'diaries'), diaries).catch((e) => console.error('Error saving diaries:', e));
     }
 }
 

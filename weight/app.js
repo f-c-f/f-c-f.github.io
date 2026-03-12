@@ -185,16 +185,22 @@ function logout() {
     }
 }
 
-// 加载数据
+// 加载数据（本地优先秒开，云端后台同步）
 function loadData() {
-    // 先从Firebase加载数据
-    if (window.firebase) {
-        const db = window.firebase.database;
-        const userRef = window.firebase.ref(db, 'users/user1');
-        
-        window.firebase.get(userRef).then((snapshot) => {
-            if (snapshot.exists()) {
-                const userData = snapshot.val();
+    // 1. 先从本地存储加载，立即渲染
+    loadFromLocalStorage();
+    updateWeightTable();
+    updateChart();
+    
+    // 2. 后台从 Firebase 拉取并同步
+    if (!window.firebase) return;
+    
+    const db = window.firebase.database;
+    const userRef = window.firebase.ref(db, 'users/user1');
+    
+    window.firebase.get(userRef).then((snapshot) => {
+        if (snapshot.exists()) {
+            const userData = snapshot.val();
                 
                 // 加载单位偏好
                 if (userData.weightUnit === '公斤' || userData.weightUnit === '斤') {
@@ -220,27 +226,12 @@ function loadData() {
                     // 同时更新本地存储
                     localStorage.setItem('weightRecords', JSON.stringify(weightRecords));
                 }
-            } else {
-                // 如果Firebase没有数据，从本地存储加载
-                loadFromLocalStorage();
             }
-            
-            // 更新表格和图表
             updateWeightTable();
             updateChart();
         }).catch((error) => {
             console.error('Error loading data from Firebase:', error);
-            // 加载失败时从本地存储加载
-            loadFromLocalStorage();
-            updateWeightTable();
-            updateChart();
         });
-    } else {
-        // 如果Firebase不可用，从本地存储加载
-        loadFromLocalStorage();
-        updateWeightTable();
-        updateChart();
-    }
 }
 
 // 从本地存储加载数据

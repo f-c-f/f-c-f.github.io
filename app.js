@@ -176,57 +176,57 @@ function setupFinanceTotalListener() {
     }
 }
 
-// 从Firebase加载数据
+// 本地存储 key
+const CACHE_KEY_ASSET = 'assetRecords_cache';
+const CACHE_KEY_STATS = 'periodStats_cache';
+
+// 先从本地缓存加载并立即渲染，再从云端拉取并静默更新
 function loadData() {
+    // 1. 优先从 localStorage 读取，秒开
+    const cachedAsset = localStorage.getItem(CACHE_KEY_ASSET);
+    const cachedStats = localStorage.getItem(CACHE_KEY_STATS);
+    if (cachedAsset) {
+        try {
+            assetRecords = Array.isArray(JSON.parse(cachedAsset)) ? JSON.parse(cachedAsset) : [];
+        } catch (_) { assetRecords = []; }
+    }
+    if (cachedStats) {
+        try {
+            periodStats = Array.isArray(JSON.parse(cachedStats)) ? JSON.parse(cachedStats) : [];
+        } catch (_) { periodStats = []; }
+    }
+    
+    // 2. 立即更新界面（利用本地缓存）
+    fillLatestAssetData();
+    updateCalculations();
+    updateAssetChanges();
+    updateCharts();
+    updateHistoryTable();
+    updateMonthSelect();
+    
+    // 3. 无 Firebase 时不再请求
     if (!window.firebase) {
-        console.error('Firebase not initialized');
-        fillLatestAssetData();
-        updateCalculations();
-        updateAssetChanges();
-        updateCharts();
-        updateHistoryTable();
         return;
     }
     
     const { database, ref, get } = window.firebase;
     
-    // 加载资产记录
-    const assetRecordsRef = ref(database, 'assetRecords');
-    get(assetRecordsRef).then((snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            // 确保assetRecords是一个数组
-            assetRecords = Array.isArray(data) ? data : [];
-        } else {
-            assetRecords = [];
-        }
-        
-        // 加载期间统计
-        const periodStatsRef = ref(database, 'periodStats');
-        get(periodStatsRef).then((snapshot) => {
+    Promise.all([
+        get(ref(database, 'assetRecords')).then((snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.val();
-                // 确保periodStats是一个数组
-                periodStats = Array.isArray(data) ? data : [];
-            } else {
-                periodStats = [];
+                assetRecords = Array.isArray(data) ? data : [];
+                localStorage.setItem(CACHE_KEY_ASSET, JSON.stringify(assetRecords));
             }
-        }).catch((error) => {
-            console.error('Error loading periodStats:', error);
-            periodStats = [];
-        }).finally(() => {
-            // 数据加载完成后更新界面
-            fillLatestAssetData();
-            updateCalculations();
-            updateAssetChanges();
-            updateCharts();
-            updateHistoryTable();
-            updateMonthSelect();
-        });
-    }).catch((error) => {
-        console.error('Error loading assetRecords:', error);
-        assetRecords = [];
-        periodStats = [];
+        }).catch((e) => { console.error('Error loading assetRecords:', e); }),
+        get(ref(database, 'periodStats')).then((snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                periodStats = Array.isArray(data) ? data : [];
+                localStorage.setItem(CACHE_KEY_STATS, JSON.stringify(periodStats));
+            }
+        }).catch((e) => { console.error('Error loading periodStats:', e); })
+    ]).finally(() => {
         fillLatestAssetData();
         updateCalculations();
         updateAssetChanges();
@@ -236,26 +236,17 @@ function loadData() {
     });
 }
 
-// 保存数据到Firebase
+// 保存数据到 localStorage 和 Firebase（本地+云端双写）
 function saveData() {
-    if (!window.firebase) {
-        console.error('Firebase not initialized');
-        return;
-    }
+    // 始终写入本地缓存，保证下次秒开
+    localStorage.setItem(CACHE_KEY_ASSET, JSON.stringify(assetRecords));
+    localStorage.setItem(CACHE_KEY_STATS, JSON.stringify(periodStats));
+    
+    if (!window.firebase) return;
     
     const { database, ref, set } = window.firebase;
-    
-    // 保存资产记录
-    const assetRecordsRef = ref(database, 'assetRecords');
-    set(assetRecordsRef, assetRecords).catch((error) => {
-        console.error('Error saving assetRecords:', error);
-    });
-    
-    // 保存期间统计
-    const periodStatsRef = ref(database, 'periodStats');
-    set(periodStatsRef, periodStats).catch((error) => {
-        console.error('Error saving periodStats:', error);
-    });
+    set(ref(database, 'assetRecords'), assetRecords).catch((e) => console.error('Error saving assetRecords:', e));
+    set(ref(database, 'periodStats'), periodStats).catch((e) => console.error('Error saving periodStats:', e));
 }
 
 
