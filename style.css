@@ -111,26 +111,33 @@ h4 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* 时间选择器 */
-.time-selector {
-    margin-bottom: 20px;
-    padding: 15px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* 可收起模块 */
+.module-collapsible .module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+    padding-bottom: 10px;
 }
 
-.time-selector label {
-    margin-right: 10px;
-    font-weight: bold;
-}
-
-.time-selector select,
-.time-selector input {
-    padding: 5px 10px;
-    margin-right: 10px;
+.module-collapsible .module-header .collapse-btn {
+    padding: 4px 12px;
+    font-size: 13px;
+    color: #7f8c8d;
+    background: #ecf0f1;
     border: 1px solid #ddd;
     border-radius: 4px;
+    cursor: pointer;
+}
+
+.module-collapsible .module-header .collapse-btn:hover {
+    background: #dfe6e9;
+    color: #2c3e50;
+}
+
+.module-collapsible[data-collapsed="true"] .module-content {
+    display: none;
 }
 
 /* 比较部分样式 */
@@ -169,6 +176,43 @@ h4 {
 
 .compare-section button:hover {
     background-color: #2980b9;
+}
+
+/* 月度统计结果样式 */
+.monthly-stats {
+    margin-top: 15px;
+}
+
+.monthly-stats-result {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+}
+
+.monthly-stats-result h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.monthly-stats-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.monthly-stats-item:last-child {
+    border-bottom: none;
+}
+
+.monthly-stats-item .label {
+    font-weight: bold;
+    color: #555;
+}
+
+.monthly-stats-item .value {
+    color: #333;
 }
 
 /* 比较结果样式 */

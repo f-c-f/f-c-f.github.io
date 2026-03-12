@@ -50,19 +50,13 @@
         
         <h1>个人资产管理系统</h1>
         
-        <!-- 时间区间选择 -->
-        <div class="time-selector">
-            <label>统计周期：</label>
-            <select id="periodSelect">
-                <option value="thisMonth">本月</option>
-                <option value="custom">自定义</option>
-            </select>
-            <input type="date" id="customDate" style="display: none;">
-        </div>
-        
         <!-- 历史记录比较 -->
-        <div class="module">
-            <h2>历史记录比较</h2>
+        <div class="module module-collapsible" data-collapsed="true">
+            <h2 class="module-header">
+                <span>历史记录比较</span>
+                <button type="button" class="collapse-btn" title="收起/展开">展开</button>
+            </h2>
+            <div class="module-content">
             <div class="compare-section">
                 <div class="form-group">
                     <label for="compare-from">从：</label>
@@ -75,6 +69,24 @@
                 <button id="compare-btn">比较</button>
             </div>
             <div id="compare-result" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <!-- 月度消费统计 -->
+        <div class="module module-collapsible" data-collapsed="true">
+            <h2 class="module-header">
+                <span>月度消费统计</span>
+                <button type="button" class="collapse-btn" title="收起/展开">展开</button>
+            </h2>
+            <div class="module-content">
+            <div class="monthly-stats">
+                <div class="form-group">
+                    <label for="month-select">选择月份：</label>
+                    <select id="month-select"></select>
+                </div>
+                <div id="monthly-stats-result"></div>
+            </div>
+            </div>
         </div>
         
         <!-- 历史记录表格 -->

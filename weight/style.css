@@ -109,12 +109,20 @@ h3 {
     font-weight: bold;
 }
 
-.form-group input {
-    flex: 1;
+.form-group input,
+.form-group select {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.form-group input {
+    flex: 1;
     max-width: 300px;
+}
+
+.form-group select {
+    min-width: 60px;
 }
 
 .form-group button {
@@ -128,6 +136,30 @@ h3 {
 
 .form-group button:hover {
     background-color: #2980b9;
+}
+
+/* 单位切换（添加记录表单内，小尺寸） */
+.unit-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-size: 13px;
+    color: #666;
+}
+
+.unit-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.unit-radio input {
+    margin: 0;
+    width: auto;
+    max-width: none;
 }
 
 /* 目标体重设置 */

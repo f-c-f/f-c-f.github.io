@@ -53,12 +53,12 @@
         <div class="goal-setting">
             <h2>目标体重设置</h2>
             <div class="form-group">
-                <label for="goal-weight">目标体重 (kg)：</label>
+                <label for="goal-weight">目标体重 (<span id="goal-unit">斤</span>)：</label>
                 <input type="number" id="goal-weight" step="0.1" min="0">
                 <button id="save-goal">保存目标</button>
             </div>
             <div class="current-goal">
-                <p>当前目标体重：<span id="current-goal">未设置</span> kg</p>
+                <p>当前目标体重：<span id="current-goal">未设置</span> <span id="current-goal-unit">斤</span></p>
             </div>
         </div>
         
@@ -66,12 +66,21 @@
         <div class="weight-form">
             <h2>添加体重记录</h2>
             <div class="form-group">
-                <label for="weight-date">日期时间：</label>
-                <input type="datetime-local" id="weight-date">
+                <label>日期时间（24小时制）：</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <input type="date" id="weight-date">
+                    <select id="weight-hour" title="小时 (00-23)"></select>
+                    <span>:</span>
+                    <select id="weight-minute" title="分钟 (00-59)"></select>
+                </div>
             </div>
             <div class="form-group">
-                <label for="weight-value">体重 (kg)：</label>
+                <label for="weight-value">体重 (<span id="weight-input-unit">斤</span>)：</label>
                 <input type="number" id="weight-value" step="0.1" min="0">
+                <span class="unit-switch">
+                    <label class="unit-radio"><input type="radio" name="weight-unit" value="斤" checked> 斤</label>
+                    <label class="unit-radio"><input type="radio" name="weight-unit" value="公斤"> 公斤</label>
+                </span>
             </div>
             <div class="form-group">
                 <label for="weight-note">备注：</label>
@@ -96,8 +105,8 @@
                     <thead>
                         <tr>
                             <th>日期</th>
-                            <th>体重 (kg)</th>
-                            <th>变化 (kg)</th>
+                            <th>体重 (<span id="table-unit">斤</span>)</th>
+                            <th>变化 (<span id="change-unit">斤</span>)</th>
                             <th>备注</th>
                             <th>操作</th>
                         </tr>

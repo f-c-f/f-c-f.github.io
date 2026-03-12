@@ -1,7 +1,86 @@
 // 全局变量
 let weightRecords = [];
-let goalWeight = null;
+let goalWeight = null;  // 内部统一用公斤存储
 let weightChart = null;
+let weightUnit = '斤';  // 斤 或 公斤，默认斤
+
+// 1 公斤 = 2 斤
+const KG_TO_JIN = 2;
+
+// 获取当前单位，公斤转显示值
+function kgToDisplay(kg) {
+    return weightUnit === '斤' ? kg * KG_TO_JIN : kg;
+}
+// 显示值转公斤存储
+function displayToKg(displayVal) {
+    return weightUnit === '斤' ? displayVal / KG_TO_JIN : displayVal;
+}
+
+// 将 Date 格式化为 datetime-local 所需的 YYYY-MM-DDTHH:MM（使用本地时区，24小时制）
+function formatLocalDateTime(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');   // getHours() 返回 0-23
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// 初始化日期时间选择器（24小时制）
+function initDateTimePickers() {
+    const hourSelect = document.getElementById('weight-hour');
+    const minuteSelect = document.getElementById('weight-minute');
+    // 填充 00-23 小时
+    for (let h = 0; h < 24; h++) {
+        const opt = document.createElement('option');
+        opt.value = String(h).padStart(2, '0');
+        opt.textContent = String(h).padStart(2, '0');
+        hourSelect.appendChild(opt);
+    }
+    // 填充 00-59 分钟
+    for (let m = 0; m < 60; m++) {
+        const opt = document.createElement('option');
+        opt.value = String(m).padStart(2, '0');
+        opt.textContent = String(m).padStart(2, '0');
+        minuteSelect.appendChild(opt);
+    }
+    // 设置为当前时间
+    const now = new Date();
+    document.getElementById('weight-date').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    hourSelect.value = String(now.getHours()).padStart(2, '0');
+    minuteSelect.value = String(now.getMinutes()).padStart(2, '0');
+}
+
+// 更新页面上所有单位标签
+function updateUnitLabels() {
+    ['goal-unit', 'current-goal-unit', 'weight-input-unit', 'table-unit', 'change-unit'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = weightUnit;
+    });
+}
+
+// 保存单位到 Firebase
+function saveWeightUnitToFirebase() {
+    if (window.firebase) {
+        const db = window.firebase.database;
+        const userRef = window.firebase.ref(db, 'users/user1');
+        window.firebase.get(userRef).then((snapshot) => {
+            const userData = snapshot.exists() ? snapshot.val() : {};
+            userData.weightUnit = weightUnit;
+            window.firebase.set(userRef, { ...userData, weightUnit }).catch(console.error);
+        }).catch(console.error);
+    }
+}
+
+// 格式化为显示的日期时间字符串（24小时制：YYYY/MM/DD HH:mm）
+function formatDisplayDateTime(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
+}
 
 // 页面加载完成后初始化
 window.onload = function() {
@@ -52,16 +131,39 @@ function initApp() {
         });
     }
     
+    // 绑定单位切换事件
+    document.querySelectorAll('input[name="weight-unit"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            weightUnit = this.value;
+            localStorage.setItem('weightUnit', weightUnit);
+            saveWeightUnitToFirebase();
+            updateUnitLabels();
+            updateWeightTable();
+            updateChart();
+            // 更新目标体重显示
+            if (goalWeight !== null) {
+                document.getElementById('current-goal').textContent = kgToDisplay(goalWeight).toFixed(1);
+                document.getElementById('goal-weight').value = kgToDisplay(goalWeight);
+            }
+        });
+    });
+    
+    // 加载单位偏好
+    const savedUnit = localStorage.getItem('weightUnit');
+    if (savedUnit === '公斤' || savedUnit === '斤') {
+        weightUnit = savedUnit;
+        document.querySelector(`input[name="weight-unit"][value="${weightUnit}"]`).checked = true;
+    }
+    updateUnitLabels();
+    
     // 绑定保存目标体重事件
     document.getElementById('save-goal').addEventListener('click', saveGoalWeight);
     
     // 绑定保存体重记录事件
     document.getElementById('save-weight').addEventListener('click', saveWeightRecord);
     
-    // 设置默认日期时间为当前时间
-    const now = new Date();
-    const formattedNow = now.toISOString().slice(0, 16); // 格式化为 YYYY-MM-DDTHH:MM
-    document.getElementById('weight-date').value = formattedNow;
+    // 初始化日期时间选择器（24小时制）
+    initDateTimePickers();
     
     // 加载数据
     loadData();
@@ -94,11 +196,18 @@ function loadData() {
             if (snapshot.exists()) {
                 const userData = snapshot.val();
                 
-                // 加载目标体重
+                // 加载单位偏好
+                if (userData.weightUnit === '公斤' || userData.weightUnit === '斤') {
+                    weightUnit = userData.weightUnit;
+                    const radio = document.querySelector(`input[name="weight-unit"][value="${weightUnit}"]`);
+                    if (radio) radio.checked = true;
+                    updateUnitLabels();
+                }
+                // 加载目标体重（存储为公斤）
                 if (userData.weightGoal) {
                     goalWeight = parseFloat(userData.weightGoal);
-                    document.getElementById('current-goal').textContent = goalWeight;
-                    document.getElementById('goal-weight').value = goalWeight;
+                    document.getElementById('current-goal').textContent = kgToDisplay(goalWeight).toFixed(1);
+                    document.getElementById('goal-weight').value = kgToDisplay(goalWeight);
                     // 同时更新本地存储
                     localStorage.setItem('goalWeight', goalWeight.toString());
                 }
@@ -136,12 +245,19 @@ function loadData() {
 
 // 从本地存储加载数据
 function loadFromLocalStorage() {
-    // 加载目标体重
+    const savedUnit = localStorage.getItem('weightUnit');
+    if (savedUnit === '公斤' || savedUnit === '斤') {
+        weightUnit = savedUnit;
+        const radio = document.querySelector(`input[name="weight-unit"][value="${weightUnit}"]`);
+        if (radio) radio.checked = true;
+        updateUnitLabels();
+    }
+    // 加载目标体重（存储为公斤）
     const savedGoal = localStorage.getItem('goalWeight');
     if (savedGoal) {
         goalWeight = parseFloat(savedGoal);
-        document.getElementById('current-goal').textContent = goalWeight;
-        document.getElementById('goal-weight').value = goalWeight;
+        document.getElementById('current-goal').textContent = kgToDisplay(goalWeight).toFixed(1);
+        document.getElementById('goal-weight').value = kgToDisplay(goalWeight);
     }
     
     // 加载体重记录
@@ -168,7 +284,8 @@ function saveData() {
         
         const userData = {
             weightGoal: goalWeight,
-            weightRecords: weightRecords
+            weightRecords: weightRecords,
+            weightUnit: weightUnit
         };
         
         window.firebase.set(userRef, userData).then(() => {
@@ -179,18 +296,18 @@ function saveData() {
     }
 }
 
-// 保存目标体重
+// 保存目标体重（用户输入为当前单位，转为公斤存储）
 function saveGoalWeight() {
     const goalInput = document.getElementById('goal-weight');
-    const goalValue = parseFloat(goalInput.value);
+    const goalDisplay = parseFloat(goalInput.value);
     
-    if (isNaN(goalValue) || goalValue <= 0) {
+    if (isNaN(goalDisplay) || goalDisplay <= 0) {
         alert('请输入有效的目标体重');
         return;
     }
     
-    goalWeight = goalValue;
-    document.getElementById('current-goal').textContent = goalWeight;
+    goalWeight = displayToKg(goalDisplay);
+    document.getElementById('current-goal').textContent = kgToDisplay(goalWeight).toFixed(1);
     saveData();
     alert('目标体重保存成功！');
 }
@@ -198,11 +315,15 @@ function saveGoalWeight() {
 // 保存体重记录
 function saveWeightRecord() {
     const dateInput = document.getElementById('weight-date');
+    const hourSelect = document.getElementById('weight-hour');
+    const minuteSelect = document.getElementById('weight-minute');
     const weightInput = document.getElementById('weight-value');
     const noteInput = document.getElementById('weight-note');
     
     const date = dateInput.value;
-    const weight = parseFloat(weightInput.value);
+    const time = `${hourSelect.value}:${minuteSelect.value}`;
+    const dateTime = date ? `${date}T${time}` : '';
+    const weightDisplay = parseFloat(weightInput.value);
     const note = noteInput.value.trim();
     
     if (!date) {
@@ -210,19 +331,21 @@ function saveWeightRecord() {
         return;
     }
     
-    if (isNaN(weight) || weight <= 0) {
+    if (isNaN(weightDisplay) || weightDisplay <= 0) {
         alert('请输入有效的体重');
         return;
     }
     
-    // 检查是否已存在该日期的记录
-    const existingIndex = weightRecords.findIndex(record => record.date === date);
+    const weight = displayToKg(weightDisplay);  // 转为公斤存储
+    
+    // 检查是否已存在该日期时间的记录
+    const existingIndex = weightRecords.findIndex(record => record.date === dateTime);
     
     if (existingIndex !== -1) {
         // 更新现有记录
         weightRecords[existingIndex] = {
             id: weightRecords[existingIndex].id,
-            date: date,
+            date: dateTime,
             weight: weight,
             note: note
         };
@@ -230,7 +353,7 @@ function saveWeightRecord() {
         // 添加新记录
         weightRecords.push({
             id: Date.now().toString(),
-            date: date,
+            date: dateTime,
             weight: weight,
             note: note
         });
@@ -246,8 +369,11 @@ function saveWeightRecord() {
     updateWeightTable();
     updateChart();
     
-    // 清空表单
-    dateInput.valueAsDate = new Date();
+    // 清空表单，重置为当前时间（24小时制）
+    const now = new Date();
+    dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    document.getElementById('weight-hour').value = String(now.getHours()).padStart(2, '0');
+    document.getElementById('weight-minute').value = String(now.getMinutes()).padStart(2, '0');
     weightInput.value = '';
     noteInput.value = '';
     
@@ -268,28 +394,23 @@ function updateWeightTable() {
     weightRecords.forEach((record, index) => {
         const row = document.createElement('tr');
         
-        // 计算体重变化
-        let change = 0;
+        // 计算体重变化（record.weight 为公斤，转换为当前单位显示）
+        let changeKg = 0;
         if (index > 0) {
-            change = record.weight - weightRecords[index - 1].weight;
+            changeKg = record.weight - weightRecords[index - 1].weight;
         }
+        const changeDisplay = kgToDisplay(Math.abs(changeKg)) * (changeKg >= 0 ? 1 : -1);
+        const changeClass = changeKg > 0 ? 'change-positive' : changeKg < 0 ? 'change-negative' : '';
+        const changeText = changeKg > 0 ? `+${changeDisplay.toFixed(1)}` : changeDisplay.toFixed(1);
         
-        const changeClass = change > 0 ? 'change-positive' : change < 0 ? 'change-negative' : '';
-        const changeText = change > 0 ? `+${change.toFixed(1)}` : change.toFixed(1);
-        
-        // 格式化日期时间显示
+        // 格式化日期时间显示（24小时制）
         const dateTime = new Date(record.date);
-        const formattedDateTime = dateTime.toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const formattedDateTime = formatDisplayDateTime(dateTime);
         
+        const weightDisplay = kgToDisplay(record.weight);
         row.innerHTML = `
             <td>${formattedDateTime}</td>
-            <td>${record.weight.toFixed(1)}</td>
+            <td>${weightDisplay.toFixed(1)}</td>
             <td class="${changeClass}">${changeText}</td>
             <td>${record.note || '-'}</td>
             <td>
@@ -321,7 +442,7 @@ function initChart() {
             labels: [],
             datasets: [
                 {
-                    label: '体重 (kg)',
+                    label: `体重 (${weightUnit})`,
                     data: [],
                     borderColor: '#3498db',
                     backgroundColor: 'rgba(52, 152, 219, 0.1)',
@@ -339,7 +460,7 @@ function initChart() {
                     beginAtZero: false,
                     title: {
                         display: true,
-                        text: '体重 (kg)'
+                        text: `体重 (${weightUnit})`
                     }
                 },
                 x: {
@@ -367,27 +488,25 @@ function initChart() {
 function updateChart() {
     if (!weightChart) return;
     
+    weightChart.options.scales.y.title.text = `体重 (${weightUnit})`;
     const labels = weightRecords.map(record => {
         const dateTime = new Date(record.date);
-        return dateTime.toLocaleString('zh-CN', {
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        return formatDisplayDateTime(dateTime);  // 24小时制
     });
-    const data = weightRecords.map(record => record.weight);
+    const data = weightRecords.map(record => kgToDisplay(record.weight));
     
     weightChart.data.labels = labels;
+    weightChart.data.datasets[0].label = `体重 (${weightUnit})`;
     weightChart.data.datasets[0].data = data;
     
     // 如果有目标体重，添加目标体重线
     if (goalWeight) {
+        const goalDisplay = kgToDisplay(goalWeight);
         // 检查是否已有目标体重数据集
         if (weightChart.data.datasets.length === 1) {
             weightChart.data.datasets.push({
-                label: '目标体重 (kg)',
-                data: Array(labels.length).fill(goalWeight),
+                label: `目标体重 (${weightUnit})`,
+                data: Array(labels.length).fill(goalDisplay),
                 borderColor: '#e74c3c',
                 borderWidth: 2,
                 borderDash: [5, 5],
@@ -395,7 +514,8 @@ function updateChart() {
                 pointRadius: 0
             });
         } else {
-            weightChart.data.datasets[1].data = Array(labels.length).fill(goalWeight);
+            weightChart.data.datasets[1].label = `目标体重 (${weightUnit})`;
+            weightChart.data.datasets[1].data = Array(labels.length).fill(goalDisplay);
         }
     } else {
         // 如果没有目标体重，移除目标体重线

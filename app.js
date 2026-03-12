@@ -59,10 +59,12 @@ function initApp() {
     
     // 绑定事件监听器
     document.getElementById('saveBtn').addEventListener('click', saveRecord);
-    document.getElementById('periodSelect').addEventListener('change', toggleCustomDate);
     
     // 初始化历史记录比较功能
     setupCompareFunctionality();
+    
+    // 初始化可收起模块
+    setupCollapsibleModules();
     
     // 绑定退出登录事件
     const logoutBtn = document.getElementById('logout-btn');
@@ -112,16 +114,28 @@ function logout() {
     }
 };
 
-// 切换自定义日期显示
-function toggleCustomDate() {
-    const periodSelect = document.getElementById('periodSelect');
-    const customDate = document.getElementById('customDate');
-    
-    if (periodSelect.value === 'custom') {
-        customDate.style.display = 'inline-block';
-    } else {
-        customDate.style.display = 'none';
-    }
+// 初始化可收起模块（历史记录比较、月度消费统计）
+function setupCollapsibleModules() {
+    document.querySelectorAll('.module-collapsible').forEach(module => {
+        const header = module.querySelector('.module-header');
+        const btn = module.querySelector('.collapse-btn');
+        if (!header || !btn) return;
+        
+        const toggle = () => {
+            const collapsed = module.dataset.collapsed === 'true';
+            module.dataset.collapsed = collapsed ? 'false' : 'true';
+            btn.textContent = collapsed ? '收起' : '展开';
+        };
+        
+        header.addEventListener('click', (e) => {
+            if (e.target === btn) return;
+            toggle();
+        });
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggle();
+        });
+    });
 }
 
 // 更新理财通明细（债券自动计算）
@@ -207,6 +221,7 @@ function loadData() {
             updateAssetChanges();
             updateCharts();
             updateHistoryTable();
+            updateMonthSelect();
         });
     }).catch((error) => {
         console.error('Error loading assetRecords:', error);
@@ -217,6 +232,7 @@ function loadData() {
         updateAssetChanges();
         updateCharts();
         updateHistoryTable();
+        updateMonthSelect();
     });
 }
 
@@ -244,74 +260,28 @@ function saveData() {
 
 
 
-// 更新计算结果
+// 更新计算结果（基于已保存记录，当前=最近一次保存，上期=上上一次保存，消费实时计算）
 function updateCalculations() {
-    // 计算当前总资产（从输入框实时计算）
-    let assetCurrent = 0;
-    const assetInputs = document.querySelectorAll('.asset-input');
-    
-    // 标记是否已处理理财通总额
-    let processedFinanceTotal = false;
-    
-    assetInputs.forEach(input => {
-        const platform = input.dataset.platform;
-        const category = input.dataset.category;
-        const subcategory = input.dataset.subcategory;
-        
-        // 如果是理财通明细记录，跳过
-        if (platform === '微信' && category === '理财通' && subcategory) {
-            return;
-        }
-        
-        // 如果是理财通总额，标记已处理
-        if (platform === '微信' && category === '理财通' && !subcategory) {
-            processedFinanceTotal = true;
-        }
-        
-        // 跳过微信总额和支付宝总额（如果存在）
-        if ((platform === '微信' && category === '微信总额') || 
-            (platform === '支付宝' && category === '支付宝总额')) {
-            return;
-        }
-        
-        // 计算金额
-        assetCurrent += parseFloat(input.value) || 0;
-    });
-    
-    // 获取上次总资产
     let assetLast = 0;
-    if (periodStats.length > 0) {
-        const lastStat = periodStats[periodStats.length - 1];
-        assetLast = lastStat.asset_current;
-    }
-    
-    // 计算资产净增长
-    let assetDelta = assetCurrent - assetLast;
-    
-    // 计算消费
+    let assetCurrent = 0;
+    let assetDelta = 0;
     let consumption = 0;
     
-    // 如果有历史记录，使用历史记录中的消费数据
-    if (periodStats.length > 0) {
-        const lastStat = periodStats[periodStats.length - 1];
-        // 从历史记录中获取消费数据
-        consumption = lastStat.consumption || 0;
-    } else {
-        // 没有历史记录时，消费为0
-        consumption = 0;
-    }
-    
-    // 如果有至少两条历史记录，使用历史记录中的资产数据
     if (periodStats.length >= 2) {
         const lastStat = periodStats[periodStats.length - 1];
         const prevStat = periodStats[periodStats.length - 2];
-        
-        // 上期总资产为上次保存的资产
-        assetLast = prevStat.asset_current;
-        // 当前总资产为本次保存的资产
-        assetCurrent = lastStat.asset_current;
-        // 重新计算资产净增长
+        assetLast = prevStat.asset_current;   // 上期 = 上上一次保存的资产
+        assetCurrent = lastStat.asset_current; // 当前 = 最近一次保存的资产
         assetDelta = assetCurrent - assetLast;
+        consumption = lastStat.input_income - assetDelta;  // 消费实时计算
+        consumption = Math.abs(consumption) < 0.01 ? 0 : consumption;
+    } else if (periodStats.length === 1) {
+        const lastStat = periodStats[0];
+        assetLast = 0;
+        assetCurrent = lastStat.asset_current;
+        assetDelta = assetCurrent - assetLast;
+        consumption = lastStat.input_income - assetDelta;
+        consumption = Math.abs(consumption) < 0.01 ? 0 : consumption;
     }
     
     // 更新界面显示
@@ -322,6 +292,14 @@ function updateCalculations() {
     
     // 更新颜色
     updateResultColors(assetDelta, consumption);
+}
+
+// 根据上期资产实时计算消费（不依赖存储值）
+function calcConsumption(stat, prevAssetCurrent) {
+    const prev = prevAssetCurrent ?? 0;
+    const delta = stat.asset_current - prev;
+    let c = stat.input_income - delta;
+    return Math.abs(c) < 0.01 ? 0 : c;
 }
 
 // 更新结果颜色
@@ -655,7 +633,7 @@ function setupHistoryTable() {
     updateHistoryTable();
 }
 
-// 更新历史记录表格
+// 更新历史记录表格（消费金额实时计算）
 function updateHistoryTable() {
     const tableBody = document.querySelector('#historyTable tbody');
     const prevPageBtn = document.getElementById('prevPage');
@@ -674,8 +652,12 @@ function updateHistoryTable() {
     const endIndex = startIndex + pageSize;
     const pageData = sortedStats.slice(startIndex, endIndex);
     
-    // 填充表格数据
+    // 填充表格数据（消费金额实时计算，对比上一条保存的资产）
     pageData.forEach((stat, index) => {
+        const statIdx = startIndex + index;
+        const prevStat = statIdx + 1 < sortedStats.length ? sortedStats[statIdx + 1] : null;
+        const consumption = calcConsumption(stat, prevStat ? prevStat.asset_current : 0);
+        
         const row = document.createElement('tr');
         const date = new Date(stat.period);
         const dateStr = date.toLocaleString('zh-CN');
@@ -695,7 +677,7 @@ function updateHistoryTable() {
             <td>${alipayAmount.toFixed(2)}</td>
             <td>${salaryCardAmount.toFixed(2)}</td>
             <td>${stat.input_income.toFixed(2)}</td>
-            <td>${stat.consumption.toFixed(2)}</td>
+            <td>${consumption.toFixed(2)}</td>
             <td>${stat.note || '-'}</td>
             <td>
                 <button class="btn-expand" data-index="${originalIndex}">展开</button>
@@ -803,6 +785,7 @@ function deleteRecord(index) {
         updateAssetChanges();
         updateCharts();
         updateHistoryTable();
+        updateMonthSelect();
         
         alert('记录删除成功！');
     }
@@ -965,19 +948,8 @@ function saveRecord() {
         assetLast = lastStat.asset_current;
     }
     
-    // 计算资产净增长和消费
+    // 资产净增长（消费不保存，由界面实时计算）
     const assetDelta = assetCurrent - assetLast;
-    let consumption = 0;
-    
-    // 只有当有历史记录时才计算消费
-    if (periodStats.length > 0) {
-        consumption = inputIncome - assetDelta;
-        // 处理浮点数精度问题，当消费的绝对值小于0.01时，视为0
-        consumption = Math.abs(consumption) < 0.01 ? 0 : consumption;
-    } else {
-        // 第一次记录时，消费为0（因为没有上次资产作为参考）
-        consumption = 0;
-    }
     
     // 保存资产记录
     assetRecords = [...assetRecords, ...currentAssets];
@@ -985,13 +957,12 @@ function saveRecord() {
     // 计算详细资产变动
     const detailedChanges = calculateDetailedChanges(currentAssets);
     
-    // 保存期间统计
+    // 保存期间统计（consumption 不存储，由界面实时计算）
     periodStats.push({
         input_income: inputIncome,
         asset_last: assetLast,
         asset_current: assetCurrent,
         asset_delta: assetDelta,
-        consumption: consumption,
         detailed_changes: detailedChanges,
         asset_details: currentAssets, // 存储完整的资产构成详细信息
         note: assetNote, // 资产备注信息
@@ -1006,6 +977,7 @@ function saveRecord() {
     updateAssetChanges();
     updateCharts();
     updateHistoryTable(); // 更新历史记录表格
+    updateMonthSelect();  // 更新月度统计
     
     alert('记录保存成功！');
 
@@ -1110,6 +1082,146 @@ function setupCompareFunctionality() {
     
     // 填充历史记录选择框
     updateCompareSelects();
+    
+    // 初始化月度消费统计
+    initMonthlyStats();
+}
+
+// 初始化月度消费统计
+function initMonthlyStats() {
+    const monthSelect = document.getElementById('month-select');
+    if (!monthSelect) return;
+    
+    // 填充月份选择框（基于历史记录）
+    updateMonthSelect();
+    
+    // 绑定月份切换事件
+    monthSelect.addEventListener('change', updateMonthlyStats);
+}
+
+// 更新月份选择框
+function updateMonthSelect() {
+    const monthSelect = document.getElementById('month-select');
+    if (!monthSelect) return;
+    
+    monthSelect.innerHTML = '';
+    
+    if (periodStats.length === 0) {
+        monthSelect.innerHTML = '<option value="">暂无历史记录</option>';
+        return;
+    }
+    
+    // 收集所有月份（格式：YYYY-MM）
+    const months = new Set();
+    periodStats.forEach(stat => {
+        const date = new Date(stat.period);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        months.add(monthKey);
+    });
+    
+    // 转换为数组并倒序排列
+    const sortedMonths = [...months].sort((a, b) => b.localeCompare(a));
+    
+    // 填充选择框
+    sortedMonths.forEach(month => {
+        const [year, m] = month.split('-');
+        const option = document.createElement('option');
+        option.value = month;
+        option.textContent = `${year}年${m}月`;
+        monthSelect.appendChild(option);
+    });
+    
+    // 默认选中最近月份
+    if (sortedMonths.length > 0) {
+        monthSelect.value = sortedMonths[0];
+    }
+    
+    // 显示当前月份的统计
+    updateMonthlyStats();
+}
+
+// 更新月度统计显示
+function updateMonthlyStats() {
+    const monthSelect = document.getElementById('month-select');
+    const resultEl = document.getElementById('monthly-stats-result');
+    if (!monthSelect || !resultEl) return;
+    
+    const selectedMonth = monthSelect.value;
+    if (!selectedMonth) {
+        resultEl.innerHTML = '<p>暂无数据</p>';
+        return;
+    }
+    
+    // 筛选该月份的记录（按时间正序）
+    const monthRecords = periodStats
+        .filter(stat => {
+            const date = new Date(stat.period);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            return monthKey === selectedMonth;
+        })
+        .sort((a, b) => new Date(a.period) - new Date(b.period));
+    
+    if (monthRecords.length === 0) {
+        resultEl.innerHTML = '<p>该月份暂无记录</p>';
+        return;
+    }
+    
+    // 计算该月份的统计数据
+    const firstRecord = monthRecords[0];
+    const lastRecord = monthRecords[monthRecords.length - 1];
+    const startAsset = firstRecord.asset_last;  // 月初资产（上月最后保存的）
+    const endAsset = lastRecord.asset_current; // 月末资产
+    
+    // 该月份内所有新增收入之和
+    const totalIncome = monthRecords.reduce((sum, r) => sum + r.input_income, 0);
+    
+    // 该月份的消费（使用实时计算函数）
+    // 对该月份内的每条记录计算消费，然后求和
+    let totalConsumption = 0;
+    for (let i = 0; i < monthRecords.length; i++) {
+        const stat = monthRecords[i];
+        const prevAsset = i === 0 ? stat.asset_last : monthRecords[i - 1].asset_current;
+        totalConsumption += calcConsumption(stat, prevAsset);
+    }
+    
+    // 资产净增长
+    const assetChange = endAsset - startAsset;
+    
+    // 构建结果HTML
+    const [year, month] = selectedMonth.split('-');
+    let html = `
+        <div class="monthly-stats-result">
+            <h3>${year}年${month}月 消费统计</h3>
+            <div class="monthly-stats-item">
+                <span class="label">记录次数：</span>
+                <span class="value">${monthRecords.length} 次</span>
+            </div>
+            <div class="monthly-stats-item">
+                <span class="label">月初总资产：</span>
+                <span class="value">${startAsset.toFixed(2)} 元</span>
+            </div>
+            <div class="monthly-stats-item">
+                <span class="label">月末总资产：</span>
+                <span class="value">${endAsset.toFixed(2)} 元</span>
+            </div>
+            <div class="monthly-stats-item">
+                <span class="label">资产净增长：</span>
+                <span class="value" style="color: ${assetChange >= 0 ? '#27ae60' : '#e74c3c'}">
+                    ${assetChange >= 0 ? '+' : ''}${assetChange.toFixed(2)} 元
+                </span>
+            </div>
+            <div class="monthly-stats-item">
+                <span class="label">新增收入合计：</span>
+                <span class="value" style="color: #27ae60">+${totalIncome.toFixed(2)} 元</span>
+            </div>
+            <div class="monthly-stats-item">
+                <span class="label">消费金额合计：</span>
+                <span class="value" style="color: #e74c3c">-${totalConsumption.toFixed(2)} 元</span>
+            </div>
+        </div>
+    `;
+    
+    resultEl.innerHTML = html;
 }
 
 // 填充历史记录选择框
@@ -1246,8 +1358,12 @@ function updateHistoryTable() {
     const endIndex = startIndex + pageSize;
     const pageData = sortedStats.slice(startIndex, endIndex);
     
-    // 填充表格数据
+    // 填充表格数据（消费金额实时计算，对比上一条保存的资产）
     pageData.forEach((stat, index) => {
+        const statIdx = startIndex + index;
+        const prevStat = statIdx + 1 < sortedStats.length ? sortedStats[statIdx + 1] : null;
+        const consumption = calcConsumption(stat, prevStat ? prevStat.asset_current : 0);
+        
         const row = document.createElement('tr');
         const date = new Date(stat.period);
         const dateStr = date.toLocaleString('zh-CN');
@@ -1267,7 +1383,7 @@ function updateHistoryTable() {
             <td>${alipayAmount.toFixed(2)}</td>
             <td>${salaryCardAmount.toFixed(2)}</td>
             <td>${stat.input_income.toFixed(2)}</td>
-            <td>${stat.consumption.toFixed(2)}</td>
+            <td>${consumption.toFixed(2)}</td>
             <td>${stat.note || '-'}</td>
             <td>
                 <button class="btn-expand" data-index="${originalIndex}">展开</button>
@@ -1356,4 +1472,5 @@ function updateHistoryTable() {
     
     // 更新比较选择框
     updateCompareSelects();
+    updateMonthSelect();
 }
