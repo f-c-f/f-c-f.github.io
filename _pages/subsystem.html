@@ -1,0 +1,71 @@
+---
+title: "个人系统"
+permalink: /personal-system/
+layout: single
+author_profile: false
+---
+
+<style>
+  .personal-system-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 18px;
+  }
+
+  .personal-system-card {
+    display: block;
+    padding: 18px;
+    border: 1px solid #d8dee4;
+    border-radius: 8px;
+    color: inherit;
+    text-decoration: none;
+    background: var(--global-bg-color, #fff);
+  }
+
+  .personal-system-card:hover {
+    border-color: #52adc8;
+    text-decoration: none;
+  }
+
+  .personal-system-card strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-size: 1.05em;
+  }
+
+  .personal-system-card span {
+    color: #6a737d;
+    font-size: 0.9em;
+  }
+
+  .personal-system-actions {
+    margin: 20px 0 8px;
+  }
+</style>
+
+这个入口把 `subsystem` 中的个人工具接入主站。首次进入会先到密码验证页；验证后可以在记账、日记、视频和体重记录之间切换。
+
+<div class="personal-system-actions">
+  <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/login.html">进入个人系统</a>
+</div>
+
+<div class="personal-system-grid">
+  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/index.html">
+    <strong>记账</strong>
+    <span>记录资产构成、消费统计和历史对比。</span>
+  </a>
+  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/diary/index.html">
+    <strong>日记</strong>
+    <span>写日记、待办和知识记录。</span>
+  </a>
+  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/video/index.html">
+    <strong>视频</strong>
+    <span>播放子系统视频列表中的本地视频。</span>
+  </a>
+  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/weight/index.html">
+    <strong>体重记录</strong>
+    <span>保存体重、目标体重并查看趋势图。</span>
+  </a>
+</div>

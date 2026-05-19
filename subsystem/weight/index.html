@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>体重记录</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+        
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
+            authDomain: "moneybase-bf6ec.firebaseapp.com",
+            databaseURL: "https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "moneybase-bf6ec",
+            storageBucket: "moneybase-bf6ec.firebasestorage.app",
+            messagingSenderId: "821348432254",
+            appId: "1:821348432254:web:7d5b062906f63011135b2f",
+            measurementId: "G-Y7WJ8DTGXV"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+        
+        // Make Firebase available globally
+        window.firebase = { app, database, ref, set, get, onValue };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="../../../" class="nav-btn site-home">主站</a>
+                <a href="../index.html" class="nav-btn">记账</a>
+                <a href="../diary/index.html" class="nav-btn">日记</a>
+                <a href="../video/index.html" class="nav-btn">视频</a>
+                <a href="index.html" class="nav-btn active">体重记录</a>
+                <button id="logout-btn" class="nav-btn logout">退出登录</button>
+            </div>
+        </nav>
+        
+        <h1>体重记录</h1>
+        
+        <!-- 目标体重设置 -->
+        <div class="goal-setting">
+            <h2>目标体重设置</h2>
+            <div class="form-group">
+                <label for="goal-weight">目标体重 (<span id="goal-unit">斤</span>)：</label>
+                <input type="number" id="goal-weight" step="0.1" min="0">
+                <button id="save-goal">保存目标</button>
+            </div>
+            <div class="current-goal">
+                <p>当前目标体重：<span id="current-goal">未设置</span> <span id="current-goal-unit">斤</span></p>
+            </div>
+        </div>
+        
+        <!-- 体重记录表单 -->
+        <div class="weight-form">
+            <h2>添加体重记录</h2>
+            <div class="form-group">
+                <label>日期时间（24小时制）：</label>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                    <input type="date" id="weight-date">
+                    <select id="weight-hour" title="小时 (00-23)"></select>
+                    <span>:</span>
+                    <select id="weight-minute" title="分钟 (00-59)"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="weight-value">体重 (<span id="weight-input-unit">斤</span>)：</label>
+                <input type="number" id="weight-value" step="0.1" min="0">
+                <span class="unit-switch">
+                    <label class="unit-radio"><input type="radio" name="weight-unit" value="斤" checked> 斤</label>
+                    <label class="unit-radio"><input type="radio" name="weight-unit" value="公斤"> 公斤</label>
+                </span>
+            </div>
+            <div class="form-group">
+                <label for="weight-note">备注：</label>
+                <input type="text" id="weight-note" placeholder="可选">
+            </div>
+            <button id="save-weight">保存记录</button>
+        </div>
+        
+        <!-- 体重变化图表 -->
+        <div class="weight-chart">
+            <h2>体重变化趋势</h2>
+            <div class="chart-container">
+                <canvas id="weightChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- 体重记录表格 -->
+        <div class="weight-table">
+            <h2>体重记录历史</h2>
+            <div class="table-container">
+                <table id="weightTable">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>体重 (<span id="table-unit">斤</span>)</th>
+                            <th>变化 (<span id="change-unit">斤</span>)</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 表格数据将通过JavaScript动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

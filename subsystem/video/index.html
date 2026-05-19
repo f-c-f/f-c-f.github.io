@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频页面</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="../../../" class="nav-btn site-home">主站</a>
+                <a href="../index.html" class="nav-btn">记账</a>
+                <a href="../diary/index.html" class="nav-btn">日记</a>
+                <a href="index.html" class="nav-btn active">视频</a>
+                <a href="../weight/index.html" class="nav-btn">体重记录</a>
+                <button id="logout-btn" class="nav-btn logout">退出登录</button>
+            </div>
+        </nav>
+        
+        <h1>我的视频</h1>
+        
+        <!-- 视频播放器 -->
+        <div class="video-player">
+            <h2>视频播放器</h2>
+            <div class="player-container">
+                <video id="videoPlayer" controls width="100%" height="480">
+                    <source src="" type="video/mp4">
+                    您的浏览器不支持视频播放。
+                </video>
+                <div class="video-info">
+                    <h3 id="videoTitle">请选择一个视频</h3>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 视频列表 -->
+        <div class="video-list">
+            <h2>视频列表</h2>
+            <div id="videoEntries">
+                <!-- 视频条目将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

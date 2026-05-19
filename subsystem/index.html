@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资产管理系统</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+        
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
+            authDomain: "moneybase-bf6ec.firebaseapp.com",
+            databaseURL: "https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "moneybase-bf6ec",
+            storageBucket: "moneybase-bf6ec.firebasestorage.app",
+            messagingSenderId: "821348432254",
+            appId: "1:821348432254:web:7d5b062906f63011135b2f",
+            measurementId: "G-Y7WJ8DTGXV"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const database = getDatabase(app);
+        
+        // Make Firebase available globally
+        window.firebase = { app, database, ref, set, get, onValue };
+    </script>
+</head>
+<body>
+    <!-- 主内容区 -->
+    <div class="container">
+        <!-- 导航栏 -->
+        <nav class="navbar">
+            <div class="nav-container">
+                <a href="../../" class="nav-btn site-home">主站</a>
+                <a href="index.html" class="nav-btn active">记账</a>
+                <a href="diary/index.html" class="nav-btn">日记</a>
+                <a href="video/index.html" class="nav-btn">视频</a>
+                <a href="weight/index.html" class="nav-btn">体重记录</a>
+                <button id="logout-btn" class="nav-btn logout">退出登录</button>
+            </div>
+        </nav>
+        
+        <h1>个人资产管理系统</h1>
+        
+        <!-- 历史记录比较 -->
+        <div class="module module-collapsible" data-collapsed="true">
+            <h2 class="module-header">
+                <span>历史记录比较</span>
+                <button type="button" class="collapse-btn" title="收起/展开">展开</button>
+            </h2>
+            <div class="module-content">
+            <div class="compare-section">
+                <div class="form-group">
+                    <label for="compare-from">从：</label>
+                    <select id="compare-from"></select>
+                </div>
+                <div class="form-group">
+                    <label for="compare-to">到：</label>
+                    <select id="compare-to"></select>
+                </div>
+                <button id="compare-btn">比较</button>
+            </div>
+            <div id="compare-result" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <!-- 月度消费统计 -->
+        <div class="module module-collapsible" data-collapsed="true">
+            <h2 class="module-header">
+                <span>月度消费统计</span>
+                <button type="button" class="collapse-btn" title="收起/展开">展开</button>
+            </h2>
+            <div class="module-content">
+            <div class="monthly-stats">
+                <div class="form-group">
+                    <label for="month-select">选择月份：</label>
+                    <select id="month-select"></select>
+                </div>
+                <div id="monthly-stats-result"></div>
+            </div>
+            </div>
+        </div>
+        
+        <!-- 历史记录表格 -->
+        <div class="module">
+            <h2>历史记录表格</h2>
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>记录时间</th>
+                            <th>总资产</th>
+                            <th>微信</th>
+                            <th>支付宝</th>
+                            <th>工资卡</th>
+                            <th>新增收入</th>
+                            <th>消费金额</th>
+                            <th>备注</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 表格数据将通过JavaScript动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <button id="prevPage">上一页</button>
+                <span id="pageInfo">第 1 页，共 0 页</span>
+                <button id="nextPage">下一页</button>
+            </div>
+        </div>
+        
+
+        
+        <!-- 资产构成区 -->
+        <div class="module">
+            <h2>资产构成</h2>
+            <div class="asset-platforms">
+                <!-- 微信 -->
+                <div class="platform">
+                    <h3>微信</h3>
+                    <div class="asset-item">
+                        <label>零钱通：</label>
+                        <input type="number" class="asset-input" data-platform="微信" data-category="零钱通" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>理财通总额：</label>
+                        <input type="number" class="asset-input" data-platform="微信" data-category="理财通" step="0.01" min="0">
+                        <span class="hint">（直接输入）</span>
+                    </div>
+                    <div class="platform-sub">
+                        <h4>理财通明细</h4>
+                        <div class="asset-item">
+                            <label>活期+：</label>
+                            <input type="number" class="asset-input" data-platform="微信" data-category="理财通" data-subcategory="活期+" step="0.01" min="0">
+                        </div>
+                        <div class="asset-item">
+                            <label>定期：</label>
+                            <input type="number" class="asset-input" data-platform="微信" data-category="理财通" data-subcategory="定期" step="0.01" min="0">
+                        </div>
+                        <div class="asset-item">
+                            <label>短期+：</label>
+                            <input type="number" class="asset-input" data-platform="微信" data-category="理财通" data-subcategory="短期+" step="0.01" min="0">
+                        </div>
+                        <div class="asset-item">
+                            <label>债券：</label>
+                            <input type="number" class="asset-input" data-platform="微信" data-category="理财通" data-subcategory="债券" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 支付宝 -->
+                <div class="platform">
+                    <h3>支付宝</h3>
+                    <div class="asset-item">
+                        <label>余额宝：</label>
+                        <input type="number" class="asset-input" data-platform="支付宝" data-category="余额宝" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>定期：</label>
+                        <input type="number" class="asset-input" data-platform="支付宝" data-category="定期" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>基金：</label>
+                        <input type="number" class="asset-input" data-platform="支付宝" data-category="基金" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>券商：</label>
+                        <input type="number" class="asset-input" data-platform="支付宝" data-category="券商" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>帮你投：</label>
+                        <input type="number" class="asset-input" data-platform="支付宝" data-category="帮你投" step="0.01" min="0">
+                    </div>
+                </div>
+                
+                <!-- 工资卡 -->
+                <div class="platform platform-salary">
+                    <h3>工资卡</h3>
+                    <div class="asset-item">
+                        <label>工资卡余额：</label>
+                        <input type="number" class="asset-input" data-platform="工资卡" data-category="工资卡余额" step="0.01" min="0">
+                    </div>
+                    <div class="asset-item">
+                        <label>备注：</label>
+                        <textarea id="asset-note" placeholder="记录大额收入与支出" style="width: 300px; height: 80px;"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 新增收入输入区 -->
+        <div class="module">
+            <h2>新增收入</h2>
+            <div class="income-input">
+                <label>本期新增收入：</label>
+                <input type="number" id="inputIncome" step="0.01" min="0">
+                <button id="saveBtn">保存记录并备份</button>
+            </div>
+        </div>
+        
+        <!-- 消费计算结果区 -->
+        <div class="module">
+            <h2>消费计算结果</h2>
+            <div class="result-item">
+                <label>上期总资产：</label>
+                <span id="assetLast">0.00</span> 元
+            </div>
+            <div class="result-item">
+                <label>当前总资产：</label>
+                <span id="assetCurrent">0.00</span> 元
+            </div>
+            <div class="result-item">
+                <label>资产净增长：</label>
+                <span id="assetDelta">0.00</span> 元
+            </div>
+            <div class="result-item">
+                <label>本期消费：</label>
+                <span id="consumption">0.00</span> 元
+            </div>
+        </div>
+        
+        <!-- 资产变动明细区 -->
+        <div class="module">
+            <h2>资产变动明细</h2>
+            <div id="assetChanges">
+                <!-- 变动明细将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <!-- 图表区 -->
+        <div class="module">
+            <h2>资产分析图表</h2>
+            <div class="charts">
+                <div class="chart-container">
+                    <h3>资产构成饼图</h3>
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>资产变化趋势</h3>
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据管理 -->
+        <div class="module">
+            <h2>数据管理</h2>
+            <div class="data-management">
+                <button id="exportBtn">导出数据</button>
+                <input type="file" id="importFile" accept=".json">
+                <button id="importBtn">导入数据</button>
+                <p class="hint">导出数据为JSON文件，可用于备份或在不同设备间同步</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>

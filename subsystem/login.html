@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码验证</title>
+    <style>
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 密码输入界面样式 */
+        .password-container {
+            background-color: white;
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .cover-image {
+            padding: 20px;
+            text-align: center;
+        }
+        
+        #cover-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        .login-form {
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .password-container h1 {
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        
+        #password-input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        #password-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        #password-submit:hover {
+            background-color: #2980b9;
+        }
+        
+        .error-message {
+            margin-top: 15px;
+            color: #e74c3c;
+            font-size: 14px;
+        }
+        
+        .password-container input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        .home-link {
+            display: inline-block;
+            margin: 20px 0 0 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .home-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="password-container">
+        <a class="home-link" href="../../">返回主站</a>
+        <div class="cover-image">
+            <img id="cover-image" src="" alt="封面图片">
+        </div>
+        <div class="login-form">
+            <h1>请输入密码</h1>
+            <input type="password" id="password-input" placeholder="请输入密码">
+            <button id="password-submit">确认</button>
+            <p id="password-error" class="error-message"></p>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK（用于从云端获取密码） -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
+            authDomain: "moneybase-bf6ec.firebaseapp.com",
+            databaseURL: "https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "moneybase-bf6ec",
+            storageBucket: "moneybase-bf6ec.firebasestorage.app",
+            messagingSenderId: "821348432254",
+            appId: "1:821348432254:web:7d5b062906f63011135b2f",
+            measurementId: "G-Y7WJ8DTGXV"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { database: getDatabase(app), ref, get };
+    </script>
+    <script>
+        // 从 Firebase 读取密码，路径：config/loginPassword
+        const PASSWORD_PATH = 'config/loginPassword';
+        const DEFAULT_NEXT = 'diary/index.html';
+
+        function getNextUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const next = params.get('next');
+            if (!next || next.startsWith('http') || next.startsWith('/') || next.includes('..')) {
+                return DEFAULT_NEXT;
+            }
+            return next;
+        }
+        
+        async function getCloudPassword() {
+            if (!window.firebase) return null;
+            try {
+                const db = window.firebase.database;
+                const passwordRef = window.firebase.ref(db, PASSWORD_PATH);
+                const snapshot = await window.firebase.get(passwordRef);
+                return snapshot.exists() ? String(snapshot.val()).trim() : null;
+            } catch (e) {
+                console.error('获取云端密码失败:', e);
+                return null;
+            }
+        }
+        
+        // 加载封面图片
+        function loadCoverImage() {
+            const coverImage = document.getElementById('cover-image');
+            const currentDate = new Date();
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1; // 月份是 1-12
+            const day = currentDate.getDate();
+            const dateStr = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
+            
+            // 随机从 1-10 中选取 font
+            const font = Math.floor(Math.random() * 10) + 1;
+            
+            // 使用万年历 API 获取图片
+            const apiKey = 'ER3492DjqHxvWSN9VKxJf13NMR';
+            const imageUrl = `https://api.shwgij.com/api/today/today?key=${apiKey}&date=${dateStr}&font=${font}&bg=`;
+            
+            coverImage.src = imageUrl;
+        }
+        
+        // 页面加载完成后初始化
+        window.onload = function() {
+            // 检查是否已经登录
+            if (localStorage.getItem('isLoggedIn') === 'true') {
+                // 已登录，跳转到目标页面
+                window.location.href = getNextUrl();
+                return;
+            }
+            
+            // 加载封面图片
+            loadCoverImage();
+            
+            // 绑定密码提交事件
+            document.getElementById('password-submit').addEventListener('click', verifyPassword);
+            
+            // 绑定回车键事件
+            document.getElementById('password-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    verifyPassword();
+                }
+            });
+        };
+        
+        // 验证密码（从云端获取密码后对比）
+        async function verifyPassword() {
+            const inputPassword = document.getElementById('password-input').value.trim();
+            const passwordError = document.getElementById('password-error');
+            const submitBtn = document.getElementById('password-submit');
+            
+            if (!inputPassword) {
+                passwordError.textContent = '请输入密码';
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            passwordError.textContent = '验证中...';
+            
+            const cloudPassword = await getCloudPassword();
+            
+            if (cloudPassword === null) {
+                passwordError.textContent = '无法获取云端密码，请检查网络或 Firebase 配置';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            if (inputPassword === cloudPassword) {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loginTime', Date.now().toString());
+                window.location.href = getNextUrl();
+            } else {
+                passwordError.textContent = '密码错误，请重新输入';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
