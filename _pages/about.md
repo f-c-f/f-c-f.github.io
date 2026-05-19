@@ -1,9 +1,8 @@
 ---
-permalink: /
+permalink: /about/
 title: "Personal Pages for Li Wangcai"
 author_profile: true
 redirect_from: 
-  - /about/
   - /about.html
 ---
 

@@ -27,7 +27,7 @@ main:
     url: /cv/
 
   - title: "个人系统"
-    url: /personal-system/
+    url: /
     
   # - title: "CV"
   #   url: /cv-json/
