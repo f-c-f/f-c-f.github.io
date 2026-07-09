@@ -25,6 +25,17 @@ excerpt: "验证后进入个人工具。"
             height: auto;
             border-radius: 8px;
         }
+
+        .cover-image-fallback {
+            display: none;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 28px;
+            color: var(--global-text-color, #333);
+            border: 1px solid var(--global-border-color, #d8dee4);
+            border-radius: 8px;
+            background: var(--global-code-background-color, #fafafa);
+        }
         
         .login-form {
             padding: 40px;
@@ -90,6 +101,7 @@ excerpt: "验证后进入个人工具。"
     <div class="password-container">
         <div class="cover-image">
             <img id="cover-image" src="" alt="封面图片">
+            <div id="cover-image-fallback" class="cover-image-fallback">欢迎回来</div>
         </div>
         <div class="login-form">
             <h1>请输入密码</h1>
@@ -99,10 +111,11 @@ excerpt: "验证后进入个人工具。"
         </div>
     </div>
     
-    <!-- Firebase SDK（用于从云端获取密码） -->
+    <!-- Firebase SDK（用于从云端获取密码）和登录逻辑 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
             authDomain: "moneybase-bf6ec.firebaseapp.com",
@@ -113,13 +126,13 @@ excerpt: "验证后进入个人工具。"
             appId: "1:821348432254:web:7d5b062906f63011135b2f",
             measurementId: "G-Y7WJ8DTGXV"
         };
-        const app = initializeApp(firebaseConfig);
-        window.firebase = { database: getDatabase(app), ref, get };
-    </script>
-    <script>
+
         // 从 Firebase 读取密码，路径：config/loginPassword
         const PASSWORD_PATH = 'config/loginPassword';
         const DEFAULT_NEXT = 'diary/index.html';
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
         function getNextUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -131,14 +144,9 @@ excerpt: "验证后进入个人工具。"
         }
         
         async function getCloudPassword() {
-            for (let i = 0; i < 30 && !window.firebase; i += 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            if (!window.firebase) return null;
             try {
-                const db = window.firebase.database;
-                const passwordRef = window.firebase.ref(db, PASSWORD_PATH);
-                const snapshot = await window.firebase.get(passwordRef);
+                const passwordRef = ref(database, PASSWORD_PATH);
+                const snapshot = await get(passwordRef);
                 return snapshot.exists() ? String(snapshot.val()).trim() : null;
             } catch (e) {
                 console.error('获取云端密码失败:', e);
@@ -149,6 +157,8 @@ excerpt: "验证后进入个人工具。"
         // 加载封面图片
         function loadCoverImage() {
             const coverImage = document.getElementById('cover-image');
+            const fallback = document.getElementById('cover-image-fallback');
+            const localFallbackImage = '/images/homepage.png';
             const currentDate = new Date();
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1; // 月份是 1-12
@@ -162,11 +172,23 @@ excerpt: "验证后进入个人工具。"
             const apiKey = 'ER3492DjqHxvWSN9VKxJf13NMR';
             const imageUrl = `https://api.shwgij.com/api/today/today?key=${apiKey}&date=${dateStr}&font=${font}&bg=`;
             
+            coverImage.onerror = function() {
+                if (coverImage.src !== new URL(localFallbackImage, window.location.origin).href) {
+                    coverImage.src = localFallbackImage;
+                    return;
+                }
+                coverImage.style.display = 'none';
+                fallback.style.display = 'block';
+            };
+            coverImage.onload = function() {
+                fallback.style.display = 'none';
+                coverImage.style.display = 'inline-block';
+            };
             coverImage.src = imageUrl;
         }
         
-        // 页面加载完成后初始化
-        window.onload = function() {
+        // 页面加载完成后初始化。使用 addEventListener，避免被主站脚本覆盖。
+        document.addEventListener('DOMContentLoaded', function() {
             // 检查是否已经登录
             if (localStorage.getItem('isLoggedIn') === 'true') {
                 // 已登录，跳转到目标页面
@@ -186,7 +208,7 @@ excerpt: "验证后进入个人工具。"
                     verifyPassword();
                 }
             });
-        };
+        });
         
         // 验证密码（从云端获取密码后对比）
         async function verifyPassword() {
