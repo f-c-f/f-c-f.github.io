@@ -119,7 +119,7 @@ excerpt: "验证后进入个人工具。"
     <script>
         // 从 Firebase 读取密码，路径：config/loginPassword
         const PASSWORD_PATH = 'config/loginPassword';
-        const DEFAULT_NEXT = 'diary/';
+        const DEFAULT_NEXT = 'diary/index.html';
 
         function getNextUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -131,6 +131,9 @@ excerpt: "验证后进入个人工具。"
         }
         
         async function getCloudPassword() {
+            for (let i = 0; i < 30 && !window.firebase; i += 1) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
             if (!window.firebase) return null;
             try {
                 const db = window.firebase.database;

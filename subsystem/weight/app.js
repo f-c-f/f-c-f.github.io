@@ -86,7 +86,7 @@ function formatDisplayDateTime(date) {
 window.onload = function() {
     // 检查登录状态
     if (!checkLoginStatus()) {
-        window.location.href = '../login.html?next=weight/';
+        window.location.href = '../login.html?next=weight/index.html';
         return;
     }
     
