@@ -1,0 +1,33 @@
+---
+layout: default
+---
+
+{% include base_path %}
+
+<main id="subsystem-main" class="subsystem-shell" role="main">
+  <div class="subsystem-shell__header">
+    <p class="subsystem-shell__eyebrow">Personal System</p>
+    {% if page.title %}
+      <h1 class="subsystem-shell__title">{{ page.title }}</h1>
+    {% endif %}
+    {% if page.excerpt %}
+      <p class="subsystem-shell__description">{{ page.excerpt }}</p>
+    {% endif %}
+  </div>
+
+  {% include subsystem-nav.html %}
+
+  <section class="subsystem-content">
+    {{ content }}
+  </section>
+</main>
+
+{% if page.scripts %}
+  {% for script in page.scripts %}
+    {% if script contains '://' %}
+      <script src="{{ script }}"></script>
+    {% else %}
+      <script src="{{ script | relative_url }}"></script>
+    {% endif %}
+  {% endfor %}
+{% endif %}

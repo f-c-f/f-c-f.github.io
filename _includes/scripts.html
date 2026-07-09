@@ -1,3 +1,13 @@
 <script type="module" src="{{ base_path }}/assets/js/main.min.js"></script>
 
+{% if page.footer_scripts %}
+  {% for script in page.footer_scripts %}
+    {% if script contains '://' %}
+      <script src="{{ script }}"></script>
+    {% else %}
+      <script src="{{ script | relative_url }}"></script>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
 {% include analytics.html %}

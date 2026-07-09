@@ -11,7 +11,7 @@ window.onload = function() {
     // 检查登录状态和会话超时
     if (!checkLoginStatus()) {
         // 未登录或会话超时，跳转到登录页面
-        window.location.href = 'login.html?next=index.html';
+        window.location.href = '/subsystem/login.html?next=accounting/';
         return;
     }
     
@@ -106,7 +106,7 @@ function logout() {
         localStorage.removeItem('loginTime');
         // 跳转到登录页面
         setTimeout(function() {
-            window.location.href = 'login.html';
+            window.location.href = '/subsystem/login.html';
         }, 100);
     } else {
         console.log('用户点击了取消，不执行退出登录');

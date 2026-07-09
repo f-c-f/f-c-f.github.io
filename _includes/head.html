@@ -15,7 +15,25 @@
   document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
 </script>
 
+{% if page.styles %}
+  {% for stylesheet in page.styles %}
+    {% if stylesheet contains '://' %}
+      <link rel="stylesheet" href="{{ stylesheet }}">
+    {% else %}
+      <link rel="stylesheet" href="{{ stylesheet | relative_url }}">
+    {% endif %}
+  {% endfor %}
+{% endif %}
 <!-- For all browsers -->
 <link rel="stylesheet" href="{{ base_path }}/assets/css/main.css">
+{% if page.head_scripts %}
+  {% for script in page.head_scripts %}
+    {% if script contains '://' %}
+      <script src="{{ script }}"></script>
+    {% else %}
+      <script src="{{ script | relative_url }}"></script>
+    {% endif %}
+  {% endfor %}
+{% endif %}
 
 <meta http-equiv="cleartype" content="on">

@@ -9,7 +9,7 @@ window.onload = async function() {
     // 检查登录状态和会话超时
     if (!checkLoginStatus()) {
         // 未登录或会话超时，跳转到登录页面
-        window.location.href = '../login.html?next=diary/index.html';
+        window.location.href = '../login.html?next=diary/';
         return;
     }
     

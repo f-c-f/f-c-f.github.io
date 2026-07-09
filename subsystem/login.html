@@ -1,32 +1,16 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>密码验证</title>
+---
+title: "密码验证"
+permalink: /subsystem/login.html
+layout: subsystem
+subsystem_active: login
+excerpt: "验证后进入个人工具。"
+---
+
     <style>
-        /* 全局样式 */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-        
         /* 密码输入界面样式 */
         .password-container {
-            background-color: white;
+            background-color: var(--global-bg-color);
             width: 100%;
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
@@ -103,10 +87,7 @@
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
     <div class="password-container">
-        <a class="home-link" href="../../">返回主站</a>
         <div class="cover-image">
             <img id="cover-image" src="" alt="封面图片">
         </div>
@@ -138,7 +119,7 @@
     <script>
         // 从 Firebase 读取密码，路径：config/loginPassword
         const PASSWORD_PATH = 'config/loginPassword';
-        const DEFAULT_NEXT = 'diary/index.html';
+        const DEFAULT_NEXT = 'diary/';
 
         function getNextUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -238,5 +219,3 @@
             }
         }
     </script>
-</body>
-</html>

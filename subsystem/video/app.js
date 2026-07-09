@@ -5,7 +5,7 @@ let videos = [];
 window.onload = function() {
     // 检查登录状态
     if (!checkLoginStatus()) {
-        window.location.href = '../login.html?next=video/index.html';
+        window.location.href = '../login.html?next=video/';
         return;
     }
     
