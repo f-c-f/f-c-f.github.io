@@ -114,6 +114,30 @@
   font-family: $sans-serif;
 }
 
+.subsystem-content .diary-input,
+.subsystem-content .diary-list,
+.subsystem-content .modal-content {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.subsystem-content .content-editor {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+.subsystem-content .editor-toolbar {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.subsystem-content .modal-content {
+  max-width: 760px;
+}
+
 .personal-system-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
