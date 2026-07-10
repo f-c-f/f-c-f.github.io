@@ -206,6 +206,9 @@ redirect_from:
     }
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('loginTime', Date.now().toString());
+    passwordInput.value = '';
+    errorMessage.textContent = '';
+    setDashboardVisible(true);
     const next = getNextUrl();
     window.location.href = next ? `/subsystem/${next}` : '/subsystem/';
   }
@@ -214,6 +217,14 @@ redirect_from:
   passwordInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') verifyPassword();
   });
-  setDashboardVisible(localStorage.getItem('isLoggedIn') === 'true');
+  const loginTime = Number(localStorage.getItem('loginTime'));
+  const loginValid = localStorage.getItem('isLoggedIn') === 'true'
+    && Number.isFinite(loginTime)
+    && Date.now() - loginTime <= 180000;
+  if (!loginValid) {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('loginTime');
+  }
+  setDashboardVisible(loginValid);
 })();
 </script>
