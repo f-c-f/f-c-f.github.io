@@ -1,41 +1,20 @@
 ---
 title: "密码验证"
 permalink: /subsystem/login.html
-layout: null
+layout: subsystem
 subsystem_active: login
 excerpt: "验证后进入个人工具。"
 ---
 
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>密码验证</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* 密码输入界面样式 */
         .password-container {
-            background-color: white;
+            background-color: var(--global-bg-color, white);
             width: 100%;
-            min-height: 100vh;
+            min-height: 68vh;
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--global-border-color, #d8dee4);
+            border-radius: 8px;
         }
         
         .cover-image {
@@ -121,10 +100,7 @@ excerpt: "验证后进入个人工具。"
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
     <div class="password-container">
-        <a class="home-link" href="/subsystem/">返回个人系统</a>
         <div class="cover-image">
             <img id="cover-image" src="" alt="封面图片">
             <div id="cover-image-fallback" class="cover-image-fallback">欢迎回来</div>
@@ -270,5 +246,3 @@ excerpt: "验证后进入个人工具。"
             }
         }
     </script>
-</body>
-</html>
