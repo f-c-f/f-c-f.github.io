@@ -570,7 +570,7 @@ function editDiary(index) {
     document.querySelector(`input[name="edit-tag"][value="${tag}"]`).checked = true;
     
     // 显示编辑模态框
-    document.getElementById('edit-modal').style.display = 'block';
+    document.getElementById('edit-modal').style.display = 'flex';
 }
 
 // 更新日记

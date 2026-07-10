@@ -46,19 +46,24 @@ scripts:
             inset: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            padding: 4vh 16px !important;
-            overflow-y: auto !important;
+            padding: 24px !important;
+            overflow: hidden !important;
+            align-items: center !important;
+            justify-content: center !important;
             background-color: rgba(0, 0, 0, 0.4) !important;
         }
 
         #edit-modal .modal-content {
             box-sizing: border-box !important;
-            width: min(92vw, 980px) !important;
-            max-width: 980px !important;
-            min-width: min(92vw, 720px) !important;
-            max-height: none !important;
+            width: min(82vw, 1040px) !important;
+            height: min(78vh, 760px) !important;
+            min-width: min(90vw, 680px) !important;
+            min-height: 520px !important;
+            max-width: calc(100vw - 48px) !important;
+            max-height: calc(100vh - 48px) !important;
             margin: 0 auto !important;
-            overflow: visible !important;
+            overflow: auto !important;
+            resize: both !important;
         }
 
         #edit-modal .editor-toolbar,
@@ -70,7 +75,7 @@ scripts:
         }
 
         #edit-modal .content-editor {
-            min-height: 320px !important;
+            min-height: 240px !important;
         }
 
         #edit-modal .form-group:not(.tag-group) input[type="text"],
@@ -82,12 +87,17 @@ scripts:
 
         @media (max-width: 768px) {
             #edit-modal {
-                padding: 3vh 8px !important;
+                padding: 10px !important;
+                align-items: flex-start !important;
             }
 
             #edit-modal .modal-content {
                 width: 96vw !important;
+                height: auto !important;
                 min-width: 0 !important;
+                min-height: 0 !important;
+                max-height: calc(100vh - 20px) !important;
+                resize: vertical !important;
             }
         }
     </style>
