@@ -46,14 +46,15 @@ scripts:
             inset: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            padding: 24px !important;
             overflow: hidden !important;
-            align-items: center !important;
-            justify-content: center !important;
             background-color: rgba(0, 0, 0, 0.4) !important;
         }
 
         #edit-modal .modal-content {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
             box-sizing: border-box !important;
             width: min(82vw, 1040px) !important;
             height: min(78vh, 760px) !important;
@@ -61,7 +62,7 @@ scripts:
             min-height: 520px !important;
             max-width: calc(100vw - 48px) !important;
             max-height: calc(100vh - 48px) !important;
-            margin: 0 auto !important;
+            margin: 0 !important;
             overflow: auto !important;
             resize: both !important;
         }
@@ -86,11 +87,6 @@ scripts:
         }
 
         @media (max-width: 768px) {
-            #edit-modal {
-                padding: 10px !important;
-                align-items: flex-start !important;
-            }
-
             #edit-modal .modal-content {
                 width: 96vw !important;
                 height: auto !important;
