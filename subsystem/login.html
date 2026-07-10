@@ -154,7 +154,7 @@ excerpt: "验证后进入个人工具。"
         function loadCoverImage() {
             const coverImage = document.getElementById('cover-image');
             const fallback = document.getElementById('cover-image-fallback');
-            const localFallbackImage = '/images/homepage.png';
+            const localFallbackImage = new URL('../images/homepage.png', window.location.href).href;
             const currentDate = new Date();
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1; // 月份是 1-12
@@ -166,10 +166,10 @@ excerpt: "验证后进入个人工具。"
             
             // 使用万年历 API 获取图片
             const apiKey = 'ER3492DjqHxvWSN9VKxJf13NMR';
-            const imageUrl = `https://api.shwgij.com/api/today/today?key=${apiKey}&date=${dateStr}&font=${font}&bg=`;
+            const imageUrl = `https://api.shwgij.com/api/today/today?key=${apiKey}&data=${dateStr}&font=${font}&bg=`;
             
             coverImage.onerror = function() {
-                if (coverImage.src !== new URL(localFallbackImage, window.location.origin).href) {
+                if (coverImage.src !== localFallbackImage) {
                     coverImage.src = localFallbackImage;
                     return;
                 }
