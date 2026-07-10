@@ -493,17 +493,18 @@ function handleDiaryDragStart(e) {
 function handleDiaryDragOver(e) {
     e.preventDefault();
     if (this.dataset.id !== draggedDiaryId) {
-        this.classList.add('drag-over');
+        clearDropIndicators();
+        this.classList.add('drop-before');
     }
 }
 
 function handleDiaryDragLeave() {
-    this.classList.remove('drag-over');
+    this.classList.remove('drop-before');
 }
 
 function handleDiaryDrop(e) {
     e.preventDefault();
-    this.classList.remove('drag-over');
+    this.classList.remove('drop-before');
 
     const targetId = this.dataset.id;
     const sourceId = draggedDiaryId || e.dataTransfer.getData('text/plain');
@@ -514,8 +515,14 @@ function handleDiaryDrop(e) {
 
 function handleDiaryDragEnd() {
     draggedDiaryId = null;
-    document.querySelectorAll('.diary-entry.dragging, .diary-entry.drag-over').forEach(entry => {
-        entry.classList.remove('dragging', 'drag-over');
+    document.querySelectorAll('.diary-entry.dragging, .diary-entry.drop-before').forEach(entry => {
+        entry.classList.remove('dragging', 'drop-before');
+    });
+}
+
+function clearDropIndicators() {
+    document.querySelectorAll('.diary-entry.drop-before').forEach(entry => {
+        entry.classList.remove('drop-before');
     });
 }
 
