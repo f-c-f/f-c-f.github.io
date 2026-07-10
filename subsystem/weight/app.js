@@ -86,7 +86,7 @@ function formatDisplayDateTime(date) {
 window.onload = function() {
     // 检查登录状态
     if (!checkLoginStatus()) {
-        window.location.href = '../login.html?next=weight/index.html';
+        window.location.href = '../?next=weight/index.html';
         return;
     }
     
@@ -180,7 +180,7 @@ function logout() {
         localStorage.removeItem('loginTime');
         // 跳转到登录页面
         setTimeout(function() {
-            window.location.href = '../login.html';
+            window.location.href = '../';
         }, 100);
     }
 }

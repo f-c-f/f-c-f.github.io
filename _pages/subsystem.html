@@ -88,15 +88,44 @@ redirect_from:
   .personal-system-actions {
     margin: 20px 0 8px;
   }
+
+  .subsystem-login {
+    max-width: 460px;
+    margin: 2rem auto;
+    padding: 2rem;
+    border: 1px solid var(--global-border-color, #d8dee4);
+    border-radius: 4px;
+    background: var(--global-bg-color, #fff);
+  }
+
+  .subsystem-login h2 { margin-top: 0; }
+  .subsystem-login input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--global-border-color, #d8dee4);
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+  .subsystem-login button { width: 100%; margin-top: 0.75rem; }
+  .subsystem-login__error { min-height: 1.4em; color: #c0392b; }
 </style>
+
+<section id="subsystem-login" class="subsystem-login" hidden>
+  <h2>请输入密码</h2>
+  <input id="subsystem-password" type="password" placeholder="请输入密码" autocomplete="current-password">
+  <button id="subsystem-login-submit" class="btn btn--primary" type="button">确认</button>
+  <p id="subsystem-login-error" class="subsystem-login__error" role="alert"></p>
+</section>
+
+<div id="subsystem-dashboard">
 
 这个入口把 `subsystem` 中的个人工具接入主站。首次进入会先到密码验证页；验证后可以在记账、日记、视频和体重记录之间切换。
 
-<div class="personal-system-actions">
-  <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/login.html">进入个人系统</a>
+<div class="personal-system-actions subsystem-dashboard">
+  <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/accounting/">进入个人系统</a>
 </div>
 
-<div class="personal-system-grid">
+<div class="personal-system-grid subsystem-dashboard">
   <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/accounting/">
     <strong>记账</strong>
     <span>记录资产构成、消费统计和历史对比。</span>
@@ -114,3 +143,77 @@ redirect_from:
     <span>保存体重、目标体重并查看趋势图。</span>
   </a>
 </div>
+
+<script>
+(() => {
+  const DATABASE_URL = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app';
+  const PASSWORD_PATH = 'config/loginPassword';
+  const TIMEOUT_MS = 8000;
+  const loginPanel = document.getElementById('subsystem-login');
+  const dashboardItems = document.querySelectorAll('.subsystem-dashboard');
+  const passwordInput = document.getElementById('subsystem-password');
+  const submitButton = document.getElementById('subsystem-login-submit');
+  const errorMessage = document.getElementById('subsystem-login-error');
+
+  function getNextUrl() {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (!next || next.startsWith('http') || next.startsWith('/') || next.includes('..')) return null;
+    return next;
+  }
+
+  function setDashboardVisible(visible) {
+    loginPanel.hidden = visible;
+    dashboardItems.forEach((item) => { item.hidden = !visible; });
+    if (!visible) passwordInput.focus();
+  }
+
+  async function getCloudPassword() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const response = await fetch(`${DATABASE_URL}/${PASSWORD_PATH}.json`, { signal: controller.signal });
+      if (!response.ok) return null;
+      const password = await response.json();
+      return password === null ? null : String(password).trim();
+    } catch (error) {
+      console.error('获取云端密码失败:', error);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async function verifyPassword() {
+    const inputPassword = passwordInput.value.trim();
+    if (!inputPassword) {
+      errorMessage.textContent = '请输入密码';
+      return;
+    }
+    submitButton.disabled = true;
+    errorMessage.textContent = '验证中...';
+    const cloudPassword = await getCloudPassword();
+    if (cloudPassword === null) {
+      errorMessage.textContent = '无法获取云端密码，请检查网络或 Firebase 配置';
+      submitButton.disabled = false;
+      return;
+    }
+    if (inputPassword !== cloudPassword) {
+      errorMessage.textContent = '密码错误，请重新输入';
+      passwordInput.value = '';
+      passwordInput.focus();
+      submitButton.disabled = false;
+      return;
+    }
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('loginTime', Date.now().toString());
+    const next = getNextUrl();
+    window.location.href = next ? `/subsystem/${next}` : '/subsystem/';
+  }
+
+  submitButton.addEventListener('click', verifyPassword);
+  passwordInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') verifyPassword();
+  });
+  setDashboardVisible(localStorage.getItem('isLoggedIn') === 'true');
+})();
+</script>
