@@ -38,6 +38,59 @@ scripts:
         // Make Firebase available globally
         window.firebase = { app, database, ref, set, get, onValue };
     </script>
+
+    <style>
+        #edit-modal {
+            position: fixed !important;
+            z-index: 100000 !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            padding: 4vh 16px !important;
+            overflow-y: auto !important;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+        }
+
+        #edit-modal .modal-content {
+            box-sizing: border-box !important;
+            width: min(92vw, 980px) !important;
+            max-width: 980px !important;
+            min-width: min(92vw, 720px) !important;
+            max-height: none !important;
+            margin: 0 auto !important;
+            overflow: visible !important;
+        }
+
+        #edit-modal .editor-toolbar,
+        #edit-modal .content-editor,
+        #edit-modal .form-group {
+            box-sizing: border-box !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        #edit-modal .content-editor {
+            min-height: 320px !important;
+        }
+
+        #edit-modal .form-group:not(.tag-group) input[type="text"],
+        #edit-modal .form-group:not(.tag-group) input[type="date"] {
+            box-sizing: border-box !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        @media (max-width: 768px) {
+            #edit-modal {
+                padding: 3vh 8px !important;
+            }
+
+            #edit-modal .modal-content {
+                width: 96vw !important;
+                min-width: 0 !important;
+            }
+        }
+    </style>
     
     <div class="container">
         <!-- 日记输入区域 -->
