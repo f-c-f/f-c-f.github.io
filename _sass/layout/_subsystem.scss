@@ -135,7 +135,10 @@
 }
 
 .subsystem-content .modal-content {
-  max-width: 760px;
+  width: min(92vw, 960px);
+  max-width: 960px;
+  max-height: 88vh;
+  overflow-y: auto;
 }
 
 .personal-system-grid {
