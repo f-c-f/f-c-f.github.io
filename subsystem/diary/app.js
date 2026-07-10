@@ -3,6 +3,7 @@ let diaries = [];
 let currentEditIndex = -1;
 let currentFilterDate = null;
 let showCompletedTodos = false;
+let draggedDiaryId = null;
 
 // 页面加载完成后初始化
 window.onload = async function() {
@@ -45,44 +46,6 @@ function checkLoginStatus() {
     return true;
 }
 
-// 加载万年历信息
-async function loadCalendar() {
-    const calendarContent = document.getElementById('calendar-content');
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1; // 月份是 1-12
-    const day = currentDate.getDate();
-    const dateStr = `${year}${month.toString().padStart(2, '0')}${day.toString().padStart(2, '0')}`;
-    
-    // 随机从 1-10 中选取 font
-    const font = Math.floor(Math.random() * 10) + 1;
-    console.log('随机选择的 font:', font);
-    
-    try {
-        // 使用用户提供的 API 获取万年历图片
-        const apiKey = 'ER3492DjqHxvWSN9VKxJf13NMR';
-        const imageUrl = `https://api.shwgij.com/api/today/today?key=${apiKey}&date=${dateStr}&font=${font}&bg=`;
-        console.log('万年历图片 URL:', imageUrl);
-        
-        // 清空日历内容
-        calendarContent.innerHTML = '';
-        
-        // 创建图片元素
-        const calendarImage = document.createElement('img');
-        calendarImage.src = imageUrl;
-        calendarImage.alt = '万年历';
-        calendarImage.style.maxWidth = '100%';
-        calendarImage.style.height = 'auto';
-        calendarImage.style.borderRadius = '8px';
-        
-        // 添加图片到日历内容区域
-        calendarContent.appendChild(calendarImage);
-    } catch (error) {
-        console.error('API 请求出错:', error);
-        calendarContent.innerHTML = '<div class="empty-state">获取万年历信息失败</div>';
-    }
-}
-
 // 初始化应用
 async function initApp() {
     loadDiaries(); // 本地缓存立即可用
@@ -119,9 +82,6 @@ async function initApp() {
     // 设置默认日期为今天
     const diaryDate = document.getElementById('diary-date');
     diaryDate.valueAsDate = new Date();
-    
-    // 加载万年历信息
-    await loadCalendar();
     
     // 自动生成默认标题
     await updateDefaultTitle();
@@ -269,6 +229,121 @@ function logout() {
 
 const DIARIES_CACHE_KEY = 'diaries_cache';
 
+function normalizeDiaries() {
+    let changed = false;
+    diaries = diaries.map((diary, index) => {
+        const normalized = { ...diary };
+
+        if (!normalized.id) {
+            normalized.id = `${Date.now()}-${index}`;
+            changed = true;
+        }
+
+        if (typeof normalized.pinned !== 'boolean') {
+            normalized.pinned = false;
+            changed = true;
+        }
+
+        if (!Number.isFinite(Number(normalized.order))) {
+            normalized.order = index;
+            changed = true;
+        } else {
+            normalized.order = Number(normalized.order);
+        }
+
+        return normalized;
+    });
+
+    sortDiaries();
+    return changed;
+}
+
+function sortDiaries() {
+    diaries.sort((a, b) => {
+        if (!!a.pinned !== !!b.pinned) {
+            return a.pinned ? -1 : 1;
+        }
+
+        const orderA = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
+        const orderB = Number.isFinite(Number(b.order)) ? Number(b.order) : 0;
+        if (orderA !== orderB) {
+            return orderA - orderB;
+        }
+
+        return new Date(b.date) - new Date(a.date);
+    });
+}
+
+function reindexDiaries() {
+    diaries.forEach((diary, index) => {
+        diary.order = index;
+    });
+}
+
+function getTopOrderForGroup(pinned) {
+    const group = diaries.filter(diary => !!diary.pinned === pinned);
+    if (group.length === 0) return 0;
+    return Math.min(...group.map(diary => Number(diary.order) || 0)) - 1;
+}
+
+function getVisibleDiaries() {
+    let filteredDiaries = [...diaries];
+
+    if (currentFilterDate) {
+        filteredDiaries = filteredDiaries.filter(diary => diary.date === currentFilterDate);
+    }
+
+    const tagFilter = document.getElementById('tag-filter').value;
+    if (tagFilter !== 'all') {
+        filteredDiaries = filteredDiaries.filter(diary => diary.tag === tagFilter);
+    }
+
+    if (!showCompletedTodos) {
+        filteredDiaries = filteredDiaries.filter(diary => {
+            if (diary.tag !== '待办') {
+                return true;
+            }
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = diary.content;
+
+            const textNodes = [];
+            function getAllTextNodes(node) {
+                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
+                    textNodes.push(node);
+                } else {
+                    for (let child of node.childNodes) {
+                        getAllTextNodes(child);
+                    }
+                }
+            }
+            getAllTextNodes(tempDiv);
+
+            if (textNodes.length === 0) {
+                return true;
+            }
+
+            const allStrikethrough = textNodes.every(node => {
+                let parent = node.parentElement;
+                while (parent) {
+                    if (parent.style.textDecoration === 'line-through' ||
+                        parent.style.textDecorationLine === 'line-through' ||
+                        parent.tagName === 'S' ||
+                        parent.tagName === 'STRIKE') {
+                        return true;
+                    }
+                    parent = parent.parentElement;
+                }
+                return false;
+            });
+
+            return !allStrikethrough;
+        });
+    }
+
+    return filteredDiaries;
+}
+
 // 加载日记数据（本地优先秒开，云端静默同步）
 function loadDiaries() {
     // 1. 优先从本地缓存加载，立即渲染
@@ -277,7 +352,8 @@ function loadDiaries() {
         try {
             const data = JSON.parse(cached);
             diaries = Array.isArray(data) ? data : [];
-            diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const changed = normalizeDiaries();
+            if (changed) saveDiaries();
             renderDiaryList();
         } catch (_) { diaries = []; }
     } else {
@@ -293,8 +369,9 @@ function loadDiaries() {
         if (snapshot.exists()) {
             diaries = snapshot.val();
             if (!Array.isArray(diaries)) diaries = [];
-            diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
+            const changed = normalizeDiaries();
             localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
+            if (changed) saveDiaries();
         }
         renderDiaryList();
     }).catch((e) => {
@@ -328,7 +405,9 @@ function saveDiary() {
         title: title,
         content: content,
         date: date,
-        tag: tag
+        tag: tag,
+        pinned: false,
+        order: getTopOrderForGroup(false)
     };
     
     diaries.unshift(newDiary); // 添加到数组开头
@@ -352,70 +431,9 @@ function saveDiary() {
 // 渲染日记列表
 function renderDiaryList() {
     const diaryEntries = document.getElementById('diary-entries');
-    
-    // 过滤日记列表
-    let filteredDiaries = diaries;
-    
-    // 按日期过滤
-    if (currentFilterDate) {
-        filteredDiaries = filteredDiaries.filter(diary => diary.date === currentFilterDate);
-    }
-    
-    // 按标签过滤
-    const tagFilter = document.getElementById('tag-filter').value;
-    if (tagFilter !== 'all') {
-        filteredDiaries = filteredDiaries.filter(diary => diary.tag === tagFilter);
-    }
-    
-    // 过滤已完成的待办事项
-    if (!showCompletedTodos) {
-        filteredDiaries = filteredDiaries.filter(diary => {
-            // 只处理待办事项
-            if (diary.tag !== '待办') {
-                return true;
-            }
-            
-            // 检查内容是否全部被画上了删除线
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = diary.content;
-            
-            // 获取所有文本节点
-            const textNodes = [];
-            function getAllTextNodes(node) {
-                if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '') {
-                    textNodes.push(node);
-                } else {
-                    for (let child of node.childNodes) {
-                        getAllTextNodes(child);
-                    }
-                }
-            }
-            getAllTextNodes(tempDiv);
-            
-            // 如果没有文本节点，视为未完成
-            if (textNodes.length === 0) {
-                return true;
-            }
-            
-            // 检查每个文本节点是否在带有删除线的元素中
-            const allStrikethrough = textNodes.every(node => {
-                let parent = node.parentElement;
-                while (parent) {
-                    if (parent.style.textDecoration === 'line-through' || 
-                        parent.style.textDecorationLine === 'line-through' ||
-                        parent.tagName === 'S' ||
-                        parent.tagName === 'STRIKE') {
-                        return true;
-                    }
-                    parent = parent.parentElement;
-                }
-                return false;
-            });
-            
-            // 如果不是全部被删除线，则显示
-            return !allStrikethrough;
-        });
-    }
+    sortDiaries();
+
+    const filteredDiaries = getVisibleDiaries();
     
     if (filteredDiaries.length === 0) {
         if (currentFilterDate) {
@@ -432,7 +450,9 @@ function renderDiaryList() {
         // 找到原始索引，用于编辑和删除操作
         const originalIndex = diaries.findIndex(d => d.id === diary.id);
         const diaryEl = document.createElement('div');
-        diaryEl.className = 'diary-entry';
+        diaryEl.className = `diary-entry${diary.pinned ? ' pinned' : ''}`;
+        diaryEl.draggable = true;
+        diaryEl.dataset.id = diary.id;
         
         // 格式化日期显示
         const formattedDate = new Date(diary.date).toLocaleDateString('zh-CN');
@@ -443,16 +463,89 @@ function renderDiaryList() {
         diaryEl.innerHTML = `
             <h4>${diary.title}</h4>
             <span class="tag ${tag}">${tag}</span>
+            ${diary.pinned ? '<span class="pin-badge">置顶</span>' : ''}
             <div class="date">${formattedDate}</div>
             <div class="content">${diary.content}</div>
             <div class="actions">
+                <button class="pin-btn" onclick="togglePinDiary('${diary.id}')">${diary.pinned ? '取消置顶' : '置顶'}</button>
                 <button class="edit-btn" onclick="editDiary(${originalIndex})">编辑</button>
                 <button class="delete-btn" onclick="deleteDiary(${originalIndex})">删除</button>
             </div>
         `;
+
+        diaryEl.addEventListener('dragstart', handleDiaryDragStart);
+        diaryEl.addEventListener('dragover', handleDiaryDragOver);
+        diaryEl.addEventListener('dragleave', handleDiaryDragLeave);
+        diaryEl.addEventListener('drop', handleDiaryDrop);
+        diaryEl.addEventListener('dragend', handleDiaryDragEnd);
         
         diaryEntries.appendChild(diaryEl);
     });
+}
+
+function handleDiaryDragStart(e) {
+    draggedDiaryId = this.dataset.id;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', draggedDiaryId);
+}
+
+function handleDiaryDragOver(e) {
+    e.preventDefault();
+    if (this.dataset.id !== draggedDiaryId) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDiaryDragLeave() {
+    this.classList.remove('drag-over');
+}
+
+function handleDiaryDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drag-over');
+
+    const targetId = this.dataset.id;
+    const sourceId = draggedDiaryId || e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) return;
+
+    moveDiaryBefore(sourceId, targetId);
+}
+
+function handleDiaryDragEnd() {
+    draggedDiaryId = null;
+    document.querySelectorAll('.diary-entry.dragging, .diary-entry.drag-over').forEach(entry => {
+        entry.classList.remove('dragging', 'drag-over');
+    });
+}
+
+function moveDiaryBefore(sourceId, targetId) {
+    sortDiaries();
+    const sourceIndex = diaries.findIndex(diary => diary.id === sourceId);
+    const targetIndex = diaries.findIndex(diary => diary.id === targetId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const [sourceDiary] = diaries.splice(sourceIndex, 1);
+    const nextTargetIndex = diaries.findIndex(diary => diary.id === targetId);
+    diaries.splice(nextTargetIndex, 0, sourceDiary);
+
+    reindexDiaries();
+    saveDiaries();
+    renderDiaryList();
+}
+
+function togglePinDiary(id) {
+    const diary = diaries.find(item => item.id === id);
+    if (!diary) return;
+
+    diary.pinned = !diary.pinned;
+    diary.order = getTopOrderForGroup(diary.pinned);
+
+    sortDiaries();
+    reindexDiaries();
+    saveDiaries();
+    renderDiaryList();
 }
 
 // 编辑日记
@@ -493,9 +586,7 @@ function updateDiary() {
         tag: tag
     };
     
-    // 重新排序
-    diaries.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+    sortDiaries();
     saveDiaries();
     renderDiaryList();
     closeEditModal();

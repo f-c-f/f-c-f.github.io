@@ -7,8 +7,6 @@ subsystem_private: true
 excerpt: "写日记、待办和知识记录。"
 styles:
   - /subsystem/diary/style.css
-head_scripts:
-  - https://cdn.jsdelivr.net/npm/lunar-calendar@0.1.4/dist/LunarCalendar.min.js
 scripts:
   - /subsystem/diary/app.js
 ---
@@ -42,14 +40,6 @@ scripts:
     </script>
     
     <div class="container">
-        <!-- 万年历区域 -->
-        <div class="calendar">
-            <h2>万年历</h2>
-            <div id="calendar-content">
-                <!-- 万年历内容将通过JavaScript动态生成 -->
-            </div>
-        </div>
-        
         <!-- 日记输入区域 -->
         <div class="diary-input">
             <h2>写日记</h2>

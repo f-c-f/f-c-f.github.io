@@ -104,39 +104,6 @@ h3 {
     text-decoration: underline;
 }
 
-/* 万年历区域样式 */
-.calendar {
-    background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-#calendar-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
-}
-
-.calendar-item {
-    background-color: #f9f9f9;
-    border-radius: 6px;
-    padding: 10px;
-    border-left: 4px solid #3498db;
-}
-
-.calendar-item strong {
-    display: block;
-    margin-bottom: 5px;
-    color: #34495e;
-}
-
-.calendar-item span {
-    color: #7f8c8d;
-}
-
 /* 日记输入区域样式 */
 .diary-input {
     background-color: white;
@@ -373,6 +340,17 @@ h3 {
     color: #9c27b0;
 }
 
+.pin-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 10px;
+    color: #8a5a00;
+    background-color: #fff1c2;
+}
+
 .form-group textarea {
     resize: vertical;
     min-height: 150px;
@@ -460,6 +438,25 @@ h3 {
     padding: 15px;
     margin-bottom: 15px;
     border-left: 4px solid #3498db;
+    cursor: grab;
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.diary-entry.pinned {
+    border-left-color: #f39c12;
+    background-color: #fffaf0;
+}
+
+.diary-entry.dragging {
+    opacity: 0.55;
+    cursor: grabbing;
+}
+
+.diary-entry.drag-over {
+    transform: translateY(2px);
+    border-color: #52adc8;
+    outline: 2px dashed #52adc8;
+    outline-offset: 3px;
 }
 
 .diary-entry h4 {
@@ -519,6 +516,15 @@ h3 {
 
 .diary-entry .delete-btn:hover {
     background-color: #c0392b;
+}
+
+.diary-entry .pin-btn {
+    background-color: #f39c12;
+    color: white;
+}
+
+.diary-entry .pin-btn:hover {
+    background-color: #d68910;
 }
 
 /* 模态框样式 */
