@@ -113,7 +113,7 @@ excerpt: "验证后进入个人工具。"
         </div>
     </div>
     
-    <!-- Firebase SDK（用于从云端获取密码）和登录逻辑 -->
+    <!-- Firebase SDK（用于从云端获取密码） -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
@@ -129,12 +129,17 @@ excerpt: "验证后进入个人工具。"
             measurementId: "G-Y7WJ8DTGXV"
         };
 
-        // 从 Firebase 读取密码，路径：config/loginPassword
+        const app = initializeApp(firebaseConfig);
+        window.subsystemFirebase = { database: getDatabase(app), ref, get };
+        window.dispatchEvent(new Event('subsystem-firebase-ready'));
+    </script>
+
+    <!-- 登录交互独立于 Firebase SDK，确保远程模块加载失败时按钮仍然可用 -->
+    <script>
+        (() => {
         const PASSWORD_PATH = 'config/loginPassword';
         const DEFAULT_NEXT = 'diary/index.html';
-
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+        const FIREBASE_TIMEOUT_MS = 8000;
 
         function getNextUrl() {
             const params = new URLSearchParams(window.location.search);
@@ -147,13 +152,42 @@ excerpt: "验证后进入个人工具。"
         
         async function getCloudPassword() {
             try {
-                const passwordRef = ref(database, PASSWORD_PATH);
-                const snapshot = await get(passwordRef);
+                const firebase = await waitForFirebase();
+                if (!firebase) return null;
+
+                const passwordRef = firebase.ref(firebase.database, PASSWORD_PATH);
+                const snapshot = await withTimeout(
+                    firebase.get(passwordRef),
+                    FIREBASE_TIMEOUT_MS
+                );
                 return snapshot.exists() ? String(snapshot.val()).trim() : null;
             } catch (e) {
                 console.error('获取云端密码失败:', e);
                 return null;
             }
+        }
+
+        function waitForFirebase() {
+            if (window.subsystemFirebase) {
+                return Promise.resolve(window.subsystemFirebase);
+            }
+
+            return new Promise((resolve) => {
+                const timeoutId = setTimeout(() => resolve(null), FIREBASE_TIMEOUT_MS);
+                window.addEventListener('subsystem-firebase-ready', () => {
+                    clearTimeout(timeoutId);
+                    resolve(window.subsystemFirebase || null);
+                }, { once: true });
+            });
+        }
+
+        function withTimeout(promise, timeoutMs) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Firebase request timed out')), timeoutMs);
+                })
+            ]);
         }
         
         // 加载封面图片
@@ -189,8 +223,8 @@ excerpt: "验证后进入个人工具。"
             coverImage.src = imageUrl;
         }
         
-        // 页面加载完成后初始化。使用 addEventListener，避免被主站脚本覆盖。
-        document.addEventListener('DOMContentLoaded', function() {
+        // 表单元素位于脚本之前，立即初始化，不等待远程模块完成加载。
+        function initializeLogin() {
             // 检查是否已经登录
             if (localStorage.getItem('isLoggedIn') === 'true') {
                 // 已登录，跳转到目标页面
@@ -210,7 +244,7 @@ excerpt: "验证后进入个人工具。"
                     verifyPassword();
                 }
             });
-        });
+        }
         
         // 验证密码（从云端获取密码后对比）
         async function verifyPassword() {
@@ -245,4 +279,7 @@ excerpt: "验证后进入个人工具。"
                 submitBtn.disabled = false;
             }
         }
+
+        initializeLogin();
+        })();
     </script>
