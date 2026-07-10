@@ -113,31 +113,11 @@ excerpt: "验证后进入个人工具。"
         </div>
     </div>
     
-    <!-- Firebase SDK（用于从云端获取密码） -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyArPIxpg9nmA3hm76ibm1QjRPQX1shkYIg",
-            authDomain: "moneybase-bf6ec.firebaseapp.com",
-            databaseURL: "https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "moneybase-bf6ec",
-            storageBucket: "moneybase-bf6ec.firebasestorage.app",
-            messagingSenderId: "821348432254",
-            appId: "1:821348432254:web:7d5b062906f63011135b2f",
-            measurementId: "G-Y7WJ8DTGXV"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        window.subsystemFirebase = { database: getDatabase(app), ref, get };
-        window.dispatchEvent(new Event('subsystem-firebase-ready'));
-    </script>
-
-    <!-- 登录交互独立于 Firebase SDK，确保远程模块加载失败时按钮仍然可用 -->
+    <!-- 使用 Firebase Realtime Database REST 接口，避免依赖远程 ES module -->
     <script>
         (() => {
         const PASSWORD_PATH = 'config/loginPassword';
+        const DATABASE_URL = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app';
         const DEFAULT_NEXT = 'diary/index.html';
         const FIREBASE_TIMEOUT_MS = 8000;
 
@@ -151,43 +131,23 @@ excerpt: "验证后进入个人工具。"
         }
         
         async function getCloudPassword() {
-            try {
-                const firebase = await waitForFirebase();
-                if (!firebase) return null;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), FIREBASE_TIMEOUT_MS);
 
-                const passwordRef = firebase.ref(firebase.database, PASSWORD_PATH);
-                const snapshot = await withTimeout(
-                    firebase.get(passwordRef),
-                    FIREBASE_TIMEOUT_MS
-                );
-                return snapshot.exists() ? String(snapshot.val()).trim() : null;
+            try {
+                const response = await fetch(`${DATABASE_URL}/${PASSWORD_PATH}.json`, {
+                    signal: controller.signal
+                });
+                if (!response.ok) return null;
+
+                const password = await response.json();
+                return password === null ? null : String(password).trim();
             } catch (e) {
                 console.error('获取云端密码失败:', e);
                 return null;
+            } finally {
+                clearTimeout(timeoutId);
             }
-        }
-
-        function waitForFirebase() {
-            if (window.subsystemFirebase) {
-                return Promise.resolve(window.subsystemFirebase);
-            }
-
-            return new Promise((resolve) => {
-                const timeoutId = setTimeout(() => resolve(null), FIREBASE_TIMEOUT_MS);
-                window.addEventListener('subsystem-firebase-ready', () => {
-                    clearTimeout(timeoutId);
-                    resolve(window.subsystemFirebase || null);
-                }, { once: true });
-            });
-        }
-
-        function withTimeout(promise, timeoutMs) {
-            return Promise.race([
-                promise,
-                new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Firebase request timed out')), timeoutMs);
-                })
-            ]);
         }
         
         // 加载封面图片
