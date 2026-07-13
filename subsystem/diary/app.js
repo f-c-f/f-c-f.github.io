@@ -50,6 +50,7 @@ function checkLoginStatus() {
 async function initApp() {
     loadDiaries(); // 本地缓存立即可用
     if (!window.firebase) setTimeout(loadDiaries, 500); // 等待 Firebase 初始化后再同步云端
+    initMarkdownEditors();
     
     // 绑定事件监听器
     document.getElementById('save-diary').addEventListener('click', saveDiary);
@@ -229,6 +230,160 @@ function logout() {
 
 const DIARIES_CACHE_KEY = 'diaries_cache';
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function sanitizeHtml(html) {
+    if (window.DOMPurify) {
+        return window.DOMPurify.sanitize(html, {
+            USE_PROFILES: { html: true },
+            FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'option']
+        });
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    template.content.querySelectorAll('script, style, iframe, object, embed, form').forEach(node => node.remove());
+    template.content.querySelectorAll('*').forEach(node => {
+        [...node.attributes].forEach(attribute => {
+            if (attribute.name.startsWith('on') || /^(javascript|data):/i.test(attribute.value.trim())) {
+                node.removeAttribute(attribute.name);
+            }
+        });
+    });
+    return template.innerHTML;
+}
+
+function renderMarkdown(markdown) {
+    const source = String(markdown ?? '');
+    if (!window.marked) {
+        return escapeHtml(source).replace(/\n/g, '<br>');
+    }
+
+    const rendered = window.marked.parse(source, { gfm: true, breaks: true });
+    return sanitizeHtml(rendered);
+}
+
+function htmlToMarkdown(html) {
+    const container = document.createElement('div');
+    container.innerHTML = sanitizeHtml(html || '');
+
+    function convert(node, depth = 0) {
+        if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+        if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+        const tag = node.tagName.toLowerCase();
+        const children = [...node.childNodes].map(child => convert(child, depth)).join('');
+        const clean = children.trim();
+        const listItems = () => [...node.children]
+            .filter(child => child.tagName === 'LI')
+            .map((child, index) => {
+                const marker = tag === 'ol' ? `${index + 1}. ` : '- ';
+                return `${'  '.repeat(depth)}${marker}${convert(child, depth + 1).trim()}`;
+            }).join('\n');
+
+        if (/^h[1-6]$/.test(tag)) return `${'#'.repeat(Number(tag[1]))} ${clean}\n\n`;
+        if (tag === 'p' || tag === 'div') return `${clean}\n\n`;
+        if (tag === 'br') return '\n';
+        if (tag === 'strong' || tag === 'b') return `**${clean}**`;
+        if (tag === 'em' || tag === 'i') return `*${clean}*`;
+        if (tag === 's' || tag === 'strike' || tag === 'del') return `~~${clean}~~`;
+        if (tag === 'blockquote') return clean.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
+        if (tag === 'ul' || tag === 'ol') return `${listItems()}\n\n`;
+        if (tag === 'li') return children;
+        if (tag === 'pre') return `\`\`\`\n${node.textContent.trim()}\n\`\`\`\n\n`;
+        if (tag === 'code') return `\`${node.textContent}\``;
+        if (tag === 'a') return `[${clean || node.getAttribute('href')}](${node.getAttribute('href') || ''})`;
+        return children;
+    }
+
+    return [...container.childNodes].map(node => convert(node)).join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function getDiaryMarkdown(diary) {
+    return diary.contentFormat === 'markdown' ? String(diary.content || '') : htmlToMarkdown(diary.content || '');
+}
+
+function getDiaryRenderedContent(diary) {
+    return diary.contentFormat === 'markdown'
+        ? renderMarkdown(diary.content)
+        : sanitizeHtml(diary.content || '');
+}
+
+function setEditorMode(editor, mode) {
+    const source = editor.querySelector('.markdown-source');
+    const preview = editor.querySelector('.markdown-preview');
+    const toolbar = editor.querySelector('.editor-toolbar');
+    const isPreview = mode === 'preview';
+
+    editor.querySelectorAll('.markdown-tab').forEach(tab => {
+        tab.classList.toggle('is-active', tab.dataset.mode === mode);
+    });
+    source.hidden = isPreview;
+    toolbar.hidden = isPreview;
+    preview.hidden = !isPreview;
+    if (isPreview) {
+        preview.innerHTML = source.value.trim()
+            ? renderMarkdown(source.value)
+            : '<p class="markdown-empty">还没有内容可预览。</p>';
+    } else {
+        source.focus();
+    }
+}
+
+function wrapSelection(textarea, before, after = before, placeholder = '文字') {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.slice(start, end) || placeholder;
+    textarea.setRangeText(`${before}${selected}${after}`, start, end, 'end');
+    textarea.focus();
+}
+
+function prefixSelection(textarea, prefix, placeholder = '列表项') {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.slice(start, end) || placeholder;
+    const replaced = selected.split('\n').map((line, index) =>
+        `${typeof prefix === 'function' ? prefix(index) : prefix}${line}`
+    ).join('\n');
+    textarea.setRangeText(replaced, start, end, 'end');
+    textarea.focus();
+}
+
+function applyMarkdownAction(textarea, action) {
+    const actions = {
+        heading: () => prefixSelection(textarea, '## ', '标题'),
+        bold: () => wrapSelection(textarea, '**', '**'),
+        italic: () => wrapSelection(textarea, '*', '*'),
+        strike: () => wrapSelection(textarea, '~~', '~~'),
+        quote: () => prefixSelection(textarea, '> ', '引用内容'),
+        'unordered-list': () => prefixSelection(textarea, '- '),
+        'ordered-list': () => prefixSelection(textarea, index => `${index + 1}. `),
+        task: () => prefixSelection(textarea, '- [ ] ', '待办事项'),
+        link: () => wrapSelection(textarea, '[', '](https://)', '链接文字'),
+        code: () => wrapSelection(textarea, '`', '`', '代码')
+    };
+    if (actions[action]) actions[action]();
+}
+
+function initMarkdownEditors() {
+    document.querySelectorAll('.markdown-editor').forEach(editor => {
+        const textarea = editor.querySelector('.markdown-source');
+        editor.querySelectorAll('.markdown-tab').forEach(tab => {
+            tab.addEventListener('click', () => setEditorMode(editor, tab.dataset.mode));
+        });
+        editor.querySelectorAll('[data-md-action]').forEach(button => {
+            button.addEventListener('click', () => applyMarkdownAction(textarea, button.dataset.mdAction));
+        });
+    });
+}
+
 function normalizeDiaries() {
     let changed = false;
     diaries = diaries.map((diary, index) => {
@@ -249,6 +404,11 @@ function normalizeDiaries() {
             changed = true;
         } else {
             normalized.order = Number(normalized.order);
+        }
+
+        if (normalized.contentFormat !== 'markdown' && normalized.contentFormat !== 'html') {
+            normalized.contentFormat = 'html';
+            changed = true;
         }
 
         return normalized;
@@ -304,8 +464,15 @@ function getVisibleDiaries() {
                 return true;
             }
 
+            if (diary.contentFormat === 'markdown') {
+                const tasks = [...String(diary.content || '').matchAll(/^\s*[-*+]\s+\[([ xX])]\s+/gm)];
+                if (tasks.length > 0 && tasks.every(task => task[1].toLowerCase() === 'x')) {
+                    return false;
+                }
+            }
+
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = diary.content;
+            tempDiv.innerHTML = getDiaryRenderedContent(diary);
 
             const textNodes = [];
             function getAllTextNodes(node) {
@@ -391,7 +558,7 @@ function saveDiaries() {
 // 保存新日记
 function saveDiary() {
     const title = document.getElementById('diary-title').value.trim();
-    const content = document.getElementById('diary-content').innerHTML.trim();
+    const content = document.getElementById('diary-content').value.trim();
     const date = document.getElementById('diary-date').value;
     const tag = document.querySelector('input[name="diary-tag"]:checked').value;
     
@@ -404,6 +571,7 @@ function saveDiary() {
         id: Date.now().toString(),
         title: title,
         content: content,
+        contentFormat: 'markdown',
         date: date,
         tag: tag,
         pinned: false,
@@ -418,7 +586,8 @@ function saveDiary() {
     const diaryTitle = document.getElementById('diary-title');
     diaryTitle.value = '';
     delete diaryTitle.dataset.userInput; // 清除用户输入标记
-    document.getElementById('diary-content').innerHTML = '';
+    document.getElementById('diary-content').value = '';
+    setEditorMode(document.querySelector('[data-editor="diary-content"]'), 'write');
     document.getElementById('diary-date').valueAsDate = new Date();
     document.querySelector('input[name="diary-tag"][value="待办"]').checked = true;
     
@@ -461,17 +630,21 @@ function renderDiaryList() {
         const tag = diary.tag || '日记';
         
         diaryEl.innerHTML = `
-            <h4>${diary.title}</h4>
-            <span class="tag ${tag}">${tag}</span>
+            <h4>${escapeHtml(diary.title)}</h4>
+            <span class="tag ${escapeHtml(tag)}">${escapeHtml(tag)}</span>
             ${diary.pinned ? '<span class="pin-badge">置顶</span>' : ''}
             <div class="date">${formattedDate}</div>
-            <div class="content">${diary.content}</div>
+            <div class="content markdown-body">${getDiaryRenderedContent(diary)}</div>
             <div class="actions">
-                <button class="pin-btn" onclick="togglePinDiary('${diary.id}')">${diary.pinned ? '取消置顶' : '置顶'}</button>
-                <button class="edit-btn" onclick="editDiary(${originalIndex})">编辑</button>
-                <button class="delete-btn" onclick="deleteDiary(${originalIndex})">删除</button>
+                <button class="pin-btn">${diary.pinned ? '取消置顶' : '置顶'}</button>
+                <button class="edit-btn">编辑</button>
+                <button class="delete-btn">删除</button>
             </div>
         `;
+
+        diaryEl.querySelector('.pin-btn').addEventListener('click', () => togglePinDiary(diary.id));
+        diaryEl.querySelector('.edit-btn').addEventListener('click', () => editDiary(originalIndex));
+        diaryEl.querySelector('.delete-btn').addEventListener('click', () => deleteDiary(originalIndex));
 
         diaryEl.addEventListener('dragstart', handleDiaryDragStart);
         diaryEl.addEventListener('dragover', handleDiaryDragOver);
@@ -562,8 +735,9 @@ function editDiary(index) {
     
     // 填充编辑表单
     document.getElementById('edit-title').value = diary.title;
-    document.getElementById('edit-content').innerHTML = diary.content;
+    document.getElementById('edit-content').value = getDiaryMarkdown(diary);
     document.getElementById('edit-date').value = diary.date;
+    setEditorMode(document.querySelector('[data-editor="edit-content"]'), 'write');
     
     // 设置标签
     const tag = diary.tag || '待办';
@@ -576,7 +750,7 @@ function editDiary(index) {
 // 更新日记
 function updateDiary() {
     const title = document.getElementById('edit-title').value.trim();
-    const content = document.getElementById('edit-content').innerHTML.trim();
+    const content = document.getElementById('edit-content').value.trim();
     const date = document.getElementById('edit-date').value;
     const tag = document.querySelector('input[name="edit-tag"]:checked').value;
     
@@ -589,6 +763,7 @@ function updateDiary() {
         ...diaries[currentEditIndex],
         title: title,
         content: content,
+        contentFormat: 'markdown',
         date: date,
         tag: tag
     };

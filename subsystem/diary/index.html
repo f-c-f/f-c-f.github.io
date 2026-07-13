@@ -8,6 +8,8 @@ excerpt: "写日记、待办和知识记录。"
 styles:
   - /subsystem/diary/style.css
 scripts:
+  - https://cdn.jsdelivr.net/npm/marked@18.0.6/lib/marked.umd.js
+  - https://cdn.jsdelivr.net/npm/dompurify@3.4.7/dist/purify.min.js
   - /subsystem/diary/app.js
 ---
 
@@ -125,72 +127,29 @@ scripts:
             </div>
             <div class="form-group">
                 <label for="diary-content">内容：</label>
-                <div class="editor-toolbar">
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('undo', false, null)" title="撤销">
-                        <span class="toolbar-icon">↶</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('redo', false, null)" title="重做">
-                        <span class="toolbar-icon">↷</span>
-                    </button>
-                    <span class="toolbar-separator"></span>
-                    <select class="toolbar-select" onchange="document.execCommand('formatBlock', false, this.value)">
-                        <option value="p">正文</option>
-                        <option value="h1">标题1</option>
-                        <option value="h2">标题2</option>
-                        <option value="h3">标题3</option>
-                    </select>
-
-                    <select class="toolbar-select" onchange="document.execCommand('fontSize', false, this.value)">
-                        <option value="1">一号</option>
-                        <option value="2">二号</option>
-                        <option value="3">三号</option>
-                        <option value="4">四号</option>
-                        <option value="5" selected>五号</option>
-                        <option value="6">六号</option>
-                        <option value="7">七号</option>
-                    </select>
-                    <span class="toolbar-separator"></span>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('bold', false, null)" title="粗体">
-                        <span class="toolbar-icon">B</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('italic', false, null)" title="斜体">
-                        <span class="toolbar-icon">I</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('underline', false, null)" title="下划线">
-                        <span class="toolbar-icon">__</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('strikeThrough', false, null)" title="删除线">
-                        <span class="toolbar-icon">—</span>
-                    </button>
-                    <span class="toolbar-separator"></span>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyLeft', false, null)" title="左对齐">
-                        <span class="toolbar-icon">≡</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyCenter', false, null)" title="居中对齐">
-                        <span class="toolbar-icon">|≡|</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyRight', false, null)" title="右对齐">
-                        <span class="toolbar-icon">≡</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyFull', false, null)" title="两端对齐">
-                        <span class="toolbar-icon">≡|≡</span>
-                    </button>
-                    <span class="toolbar-separator"></span>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('insertOrderedList', false, null)" title="有序列表">
-                        <span class="toolbar-icon">1.</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('insertUnorderedList', false, null)" title="无序列表">
-                        <span class="toolbar-icon">•</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('outdent', false, null)" title="减少缩进">
-                        <span class="toolbar-icon">←</span>
-                    </button>
-                    <button type="button" class="toolbar-btn" onclick="document.execCommand('indent', false, null)" title="增加缩进">
-                        <span class="toolbar-icon">→</span>
-                    </button>
+                <div class="markdown-editor" data-editor="diary-content">
+                    <div class="markdown-tabs" role="tablist" aria-label="正文模式">
+                        <button type="button" class="markdown-tab is-active" data-mode="write">编辑</button>
+                        <button type="button" class="markdown-tab" data-mode="preview">预览</button>
+                    </div>
+                    <div class="editor-toolbar" aria-label="Markdown 快捷工具栏">
+                        <button type="button" class="toolbar-btn" data-md-action="heading" title="二级标题">H2</button>
+                        <button type="button" class="toolbar-btn" data-md-action="bold" title="粗体"><strong>B</strong></button>
+                        <button type="button" class="toolbar-btn" data-md-action="italic" title="斜体"><em>I</em></button>
+                        <button type="button" class="toolbar-btn" data-md-action="strike" title="删除线"><s>S</s></button>
+                        <span class="toolbar-separator"></span>
+                        <button type="button" class="toolbar-btn" data-md-action="quote" title="引用">❝</button>
+                        <button type="button" class="toolbar-btn" data-md-action="unordered-list" title="无序列表">• 列表</button>
+                        <button type="button" class="toolbar-btn" data-md-action="ordered-list" title="有序列表">1. 列表</button>
+                        <button type="button" class="toolbar-btn" data-md-action="task" title="待办事项">☐ 待办</button>
+                        <span class="toolbar-separator"></span>
+                        <button type="button" class="toolbar-btn" data-md-action="link" title="链接">链接</button>
+                        <button type="button" class="toolbar-btn" data-md-action="code" title="行内代码">代码</button>
+                    </div>
+                    <textarea id="diary-content" class="markdown-source" placeholder="用 Markdown 写日记，例如：&#10;&#10;## 今天&#10;&#10;- 完成了一件事&#10;- [ ] 明天要做的事"></textarea>
+                    <div id="diary-content-preview" class="markdown-preview" hidden></div>
+                    <p class="markdown-hint">支持标题、列表、待办、引用、链接、代码块等 Markdown 语法。</p>
                 </div>
-                <div id="diary-content" class="content-editor" contenteditable="true" placeholder="请输入日记内容"></div>
-                <input type="hidden" id="diary-content-hidden">
             </div>
             <div class="form-group">
                 <label for="diary-date">日期：</label>
@@ -255,72 +214,29 @@ scripts:
                 </div>
                 <div class="form-group">
                     <label for="edit-content">内容：</label>
-                    <div class="editor-toolbar">
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('undo', false, null)" title="撤销">
-                            <span class="toolbar-icon">↶</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('redo', false, null)" title="重做">
-                            <span class="toolbar-icon">↷</span>
-                        </button>
-                        <span class="toolbar-separator"></span>
-                        <select class="toolbar-select" onchange="document.execCommand('formatBlock', false, this.value)">
-                            <option value="p">正文</option>
-                            <option value="h1">标题1</option>
-                            <option value="h2">标题2</option>
-                            <option value="h3">标题3</option>
-                        </select>
-
-                        <select class="toolbar-select" onchange="document.execCommand('fontSize', false, this.value)">
-                            <option value="1">一号</option>
-                            <option value="2">二号</option>
-                            <option value="3">三号</option>
-                            <option value="4">四号</option>
-                            <option value="5" selected>五号</option>
-                            <option value="6">六号</option>
-                            <option value="7">七号</option>
-                        </select>
-                        <span class="toolbar-separator"></span>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('bold', false, null)" title="粗体">
-                            <span class="toolbar-icon">B</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('italic', false, null)" title="斜体">
-                            <span class="toolbar-icon">I</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('underline', false, null)" title="下划线">
-                            <span class="toolbar-icon">__</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('strikeThrough', false, null)" title="删除线">
-                            <span class="toolbar-icon">—</span>
-                        </button>
-                        <span class="toolbar-separator"></span>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyLeft', false, null)" title="左对齐">
-                            <span class="toolbar-icon">≡</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyCenter', false, null)" title="居中对齐">
-                            <span class="toolbar-icon">|≡|</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyRight', false, null)" title="右对齐">
-                            <span class="toolbar-icon">≡</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('justifyFull', false, null)" title="两端对齐">
-                            <span class="toolbar-icon">≡|≡</span>
-                        </button>
-                        <span class="toolbar-separator"></span>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('insertOrderedList', false, null)" title="有序列表">
-                            <span class="toolbar-icon">1.</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('insertUnorderedList', false, null)" title="无序列表">
-                            <span class="toolbar-icon">•</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('outdent', false, null)" title="减少缩进">
-                            <span class="toolbar-icon">←</span>
-                        </button>
-                        <button type="button" class="toolbar-btn" onclick="document.execCommand('indent', false, null)" title="增加缩进">
-                            <span class="toolbar-icon">→</span>
-                        </button>
+                    <div class="markdown-editor" data-editor="edit-content">
+                        <div class="markdown-tabs" role="tablist" aria-label="正文模式">
+                            <button type="button" class="markdown-tab is-active" data-mode="write">编辑</button>
+                            <button type="button" class="markdown-tab" data-mode="preview">预览</button>
+                        </div>
+                        <div class="editor-toolbar" aria-label="Markdown 快捷工具栏">
+                            <button type="button" class="toolbar-btn" data-md-action="heading" title="二级标题">H2</button>
+                            <button type="button" class="toolbar-btn" data-md-action="bold" title="粗体"><strong>B</strong></button>
+                            <button type="button" class="toolbar-btn" data-md-action="italic" title="斜体"><em>I</em></button>
+                            <button type="button" class="toolbar-btn" data-md-action="strike" title="删除线"><s>S</s></button>
+                            <span class="toolbar-separator"></span>
+                            <button type="button" class="toolbar-btn" data-md-action="quote" title="引用">❝</button>
+                            <button type="button" class="toolbar-btn" data-md-action="unordered-list" title="无序列表">• 列表</button>
+                            <button type="button" class="toolbar-btn" data-md-action="ordered-list" title="有序列表">1. 列表</button>
+                            <button type="button" class="toolbar-btn" data-md-action="task" title="待办事项">☐ 待办</button>
+                            <span class="toolbar-separator"></span>
+                            <button type="button" class="toolbar-btn" data-md-action="link" title="链接">链接</button>
+                            <button type="button" class="toolbar-btn" data-md-action="code" title="行内代码">代码</button>
+                        </div>
+                        <textarea id="edit-content" class="markdown-source" placeholder="用 Markdown 继续编辑"></textarea>
+                        <div id="edit-content-preview" class="markdown-preview" hidden></div>
+                        <p class="markdown-hint">保存的是 Markdown 原文，再次编辑时会原样恢复。</p>
                     </div>
-                    <div id="edit-content" class="content-editor" contenteditable="true"></div>
-                    <input type="hidden" id="edit-content-hidden">
                 </div>
                 <div class="form-group">
                     <label for="edit-date">日期：</label>
