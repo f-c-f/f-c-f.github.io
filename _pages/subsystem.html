@@ -163,7 +163,10 @@ redirect_from:
 
   function setDashboardVisible(visible) {
     loginPanel.hidden = visible;
+    loginPanel.setAttribute('aria-hidden', String(visible));
+    loginPanel.style.display = visible ? 'none' : '';
     dashboardItems.forEach((item) => { item.hidden = !visible; });
+    passwordInput.disabled = visible;
     if (!visible) passwordInput.focus();
   }
 
@@ -207,6 +210,7 @@ redirect_from:
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('loginTime', Date.now().toString());
     passwordInput.value = '';
+    passwordInput.blur();
     errorMessage.textContent = '';
     setDashboardVisible(true);
     const next = getNextUrl();
