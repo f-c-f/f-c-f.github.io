@@ -113,6 +113,10 @@ h3 {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.diary-input > h2 {
+    margin-top: 0;
+}
+
 /* 编辑器工具栏样式 */
 .editor-toolbar {
     display: flex;
