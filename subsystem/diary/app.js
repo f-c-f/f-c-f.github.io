@@ -358,7 +358,8 @@ function prefixSelection(textarea, prefix, placeholder = '列表项') {
 
 function applyMarkdownAction(textarea, action) {
     const actions = {
-        heading: () => prefixSelection(textarea, '## ', '标题'),
+        'heading-1': () => prefixSelection(textarea, '# ', '一级标题'),
+        'heading-2': () => prefixSelection(textarea, '## ', '二级标题'),
         bold: () => wrapSelection(textarea, '**', '**'),
         italic: () => wrapSelection(textarea, '*', '*'),
         strike: () => wrapSelection(textarea, '~~', '~~'),
@@ -645,6 +646,7 @@ function renderDiaryList() {
         diaryEl.querySelector('.pin-btn').addEventListener('click', () => togglePinDiary(diary.id));
         diaryEl.querySelector('.edit-btn').addEventListener('click', () => editDiary(originalIndex));
         diaryEl.querySelector('.delete-btn').addEventListener('click', () => deleteDiary(originalIndex));
+        enableMarkdownTaskCheckboxes(diaryEl, diary);
 
         diaryEl.addEventListener('dragstart', handleDiaryDragStart);
         diaryEl.addEventListener('dragover', handleDiaryDragOver);
@@ -653,6 +655,31 @@ function renderDiaryList() {
         diaryEl.addEventListener('dragend', handleDiaryDragEnd);
         
         diaryEntries.appendChild(diaryEl);
+    });
+}
+
+function enableMarkdownTaskCheckboxes(diaryEl, diary) {
+    if (diary.contentFormat !== 'markdown') return;
+
+    const checkboxes = diaryEl.querySelectorAll('.markdown-body li.task-list-item > input[type="checkbox"]');
+    checkboxes.forEach((checkbox, taskIndex) => {
+        checkbox.disabled = false;
+        checkbox.setAttribute('aria-label', '切换待办完成状态');
+        checkbox.addEventListener('click', event => event.stopPropagation());
+        checkbox.addEventListener('change', () => {
+            let currentTaskIndex = -1;
+            diary.content = String(diary.content || '').replace(
+                /^(\s*[-*+]\s+\[)([ xX])(\]\s+)/gm,
+                (match, before, state, after) => {
+                    currentTaskIndex += 1;
+                    return currentTaskIndex === taskIndex
+                        ? `${before}${checkbox.checked ? 'x' : ' '}${after}`
+                        : match;
+                }
+            );
+            saveDiaries();
+            renderDiaryList();
+        });
     });
 }
 

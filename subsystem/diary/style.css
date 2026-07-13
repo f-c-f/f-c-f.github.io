@@ -583,6 +583,7 @@ h3 {
 .markdown-preview h1,
 .markdown-preview h2,
 .markdown-preview h3 {
+    display: block;
     margin: 1.2em 0 0.55em;
     padding: 0;
     border: 0;
@@ -637,6 +638,11 @@ h3 {
 .markdown-body input[type="checkbox"],
 .markdown-preview input[type="checkbox"] {
     margin-right: 0.45em;
+}
+
+.markdown-body li.task-list-item > input[type="checkbox"]:not(:disabled) {
+    cursor: pointer;
+    accent-color: #27ae60;
 }
 
 /* 日记列表中的有序/无序列表，保持合理缩进 */
