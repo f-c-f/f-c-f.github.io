@@ -640,7 +640,7 @@ h3 {
     margin-right: 0.45em;
 }
 
-.markdown-body li.task-list-item > input[type="checkbox"]:not(:disabled) {
+.markdown-body input[type="checkbox"]:not(:disabled) {
     cursor: pointer;
     accent-color: #27ae60;
 }

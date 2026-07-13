@@ -261,7 +261,11 @@ function sanitizeHtml(html) {
 }
 
 function renderMarkdown(markdown) {
-    const source = String(markdown ?? '');
+    // GFM 要求任务框后有空格；这里兼容用户手写的 `- [ ]内容`。
+    const source = String(markdown ?? '').replace(
+        /^(\s*[-*+]\s+\[[ xX]\])(?=\S)/gm,
+        '$1 '
+    );
     if (!window.marked) {
         return escapeHtml(source).replace(/\n/g, '<br>');
     }
@@ -466,7 +470,7 @@ function getVisibleDiaries() {
             }
 
             if (diary.contentFormat === 'markdown') {
-                const tasks = [...String(diary.content || '').matchAll(/^\s*[-*+]\s+\[([ xX])]\s+/gm)];
+                const tasks = [...String(diary.content || '').matchAll(/^\s*[-*+]\s+\[([ xX])](?:[ \t]*)/gm)];
                 if (tasks.length > 0 && tasks.every(task => task[1].toLowerCase() === 'x')) {
                     return false;
                 }
@@ -661,15 +665,23 @@ function renderDiaryList() {
 function enableMarkdownTaskCheckboxes(diaryEl, diary) {
     if (diary.contentFormat !== 'markdown') return;
 
-    const checkboxes = diaryEl.querySelectorAll('.markdown-body li.task-list-item > input[type="checkbox"]');
+    const taskPattern = /^(\s*[-*+]\s+\[)([ xX])(\][ \t]*)/gm;
+    const taskCount = [...String(diary.content || '').matchAll(taskPattern)].length;
+    const checkboxes = [...diaryEl.querySelectorAll('.markdown-body input[type="checkbox"]')]
+        .slice(0, taskCount);
+
     checkboxes.forEach((checkbox, taskIndex) => {
+        checkbox.removeAttribute('disabled');
         checkbox.disabled = false;
+        checkbox.draggable = false;
         checkbox.setAttribute('aria-label', '切换待办完成状态');
+        checkbox.addEventListener('pointerdown', event => event.stopPropagation());
+        checkbox.addEventListener('mousedown', event => event.stopPropagation());
         checkbox.addEventListener('click', event => event.stopPropagation());
         checkbox.addEventListener('change', () => {
             let currentTaskIndex = -1;
             diary.content = String(diary.content || '').replace(
-                /^(\s*[-*+]\s+\[)([ xX])(\]\s+)/gm,
+                taskPattern,
                 (match, before, state, after) => {
                     currentTaskIndex += 1;
                     return currentTaskIndex === taskIndex
