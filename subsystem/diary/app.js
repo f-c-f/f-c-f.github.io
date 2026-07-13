@@ -2,7 +2,7 @@
 let diaries = [];
 let currentEditIndex = -1;
 let currentFilterDate = null;
-let showCompletedTodos = false;
+let showCompletedTodos = true;
 let draggedDiaryId = null;
 
 // 页面加载完成后初始化
