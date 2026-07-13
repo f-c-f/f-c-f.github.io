@@ -367,8 +367,8 @@ function loadDiaries() {
     const { database, ref, get } = window.firebase;
     get(ref(database, 'diaries')).then((snapshot) => {
         if (snapshot.exists()) {
-            diaries = snapshot.val();
-            if (!Array.isArray(diaries)) diaries = [];
+            const cloudDiaries = snapshot.val();
+            diaries = Array.isArray(cloudDiaries) ? cloudDiaries : Object.values(cloudDiaries || {});
             const changed = normalizeDiaries();
             localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
             if (changed) saveDiaries();

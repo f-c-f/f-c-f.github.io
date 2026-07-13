@@ -220,7 +220,9 @@ function loadData() {
                 
                 // 加载体重记录
                 if (userData.weightRecords) {
-                    weightRecords = userData.weightRecords;
+                    weightRecords = Array.isArray(userData.weightRecords)
+                        ? userData.weightRecords
+                        : Object.values(userData.weightRecords);
                     // 按日期排序
                     weightRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
                     // 同时更新本地存储

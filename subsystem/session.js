@@ -51,3 +51,46 @@
     }
   }
 })();
+
+// Keep the data pages usable when the Firebase ES module cannot load.
+(function () {
+  if (window.firebase) return;
+
+  const databaseUrl = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app';
+  const database = { __rest: true };
+
+  function makeUrl(path) {
+    const encodedPath = path.split('/').map(encodeURIComponent).join('/');
+    return `${databaseUrl}/${encodedPath}.json`;
+  }
+
+  function ref(_database, path) {
+    return { path };
+  }
+
+  async function get(reference) {
+    const response = await fetch(makeUrl(reference.path));
+    if (!response.ok) throw new Error(`Firebase REST read failed: ${response.status}`);
+    const value = await response.json();
+    return {
+      exists: () => value !== null && value !== undefined,
+      val: () => value
+    };
+  }
+
+  async function set(reference, value) {
+    const response = await fetch(makeUrl(reference.path), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(value)
+    });
+    if (!response.ok) throw new Error(`Firebase REST write failed: ${response.status}`);
+  }
+
+  function onValue(reference, callback) {
+    get(reference).then(callback).catch((error) => console.error(error));
+    return () => {};
+  }
+
+  window.firebase = { database, ref, get, set, onValue };
+})();
