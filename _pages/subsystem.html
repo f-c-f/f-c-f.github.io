@@ -91,10 +91,6 @@ redirect_from:
     font-size: 0.9em;
   }
 
-  .personal-system-actions {
-    margin: 20px 0 8px;
-  }
-
   .subsystem-login {
     max-width: 460px;
     margin: 2rem auto;
@@ -136,9 +132,6 @@ redirect_from:
   const submitButton = document.getElementById('subsystem-login-submit');
   const errorMessage = document.getElementById('subsystem-login-error');
   const dashboardHTML = `
-    <div class="personal-system-actions subsystem-dashboard">
-      <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/accounting/">进入Tools</a>
-    </div>
     <div class="personal-system-grid subsystem-dashboard">
       <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/accounting/">
         <strong>记账</strong>
