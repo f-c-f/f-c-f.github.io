@@ -370,16 +370,35 @@ function applyMarkdownAction(textarea, action) {
         quote: () => prefixSelection(textarea, '> ', '引用内容'),
         'unordered-list': () => prefixSelection(textarea, '- '),
         'ordered-list': () => prefixSelection(textarea, index => `${index + 1}. `),
-        task: () => prefixSelection(textarea, '- [ ] ', '待办事项'),
+        task: () => prefixSelection(textarea, '- [ ] ', ''),
         link: () => wrapSelection(textarea, '[', '](https://)', '链接文字'),
         code: () => wrapSelection(textarea, '`', '`', '代码')
     };
     if (actions[action]) actions[action]();
 }
 
+function continueMarkdownMarker(textarea, event) {
+    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    if (start !== end) return;
+
+    const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+    const currentLine = textarea.value.slice(lineStart, start);
+    const markerMatch = currentLine.match(/^(\s*(?:[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|>\s+|\d+\.\s+))/);
+    if (!markerMatch) return;
+
+    event.preventDefault();
+    textarea.setRangeText(`\n${markerMatch[1]}`, start, end, 'end');
+}
+
 function initMarkdownEditors() {
     document.querySelectorAll('.markdown-editor').forEach(editor => {
         const textarea = editor.querySelector('.markdown-source');
+        textarea.addEventListener('keydown', event => continueMarkdownMarker(textarea, event));
         editor.querySelectorAll('.markdown-tab').forEach(tab => {
             tab.addEventListener('click', () => setEditorMode(editor, tab.dataset.mode));
         });
