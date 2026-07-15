@@ -131,6 +131,7 @@ redirect_from:
   const passwordInput = document.getElementById('subsystem-password');
   const submitButton = document.getElementById('subsystem-login-submit');
   const errorMessage = document.getElementById('subsystem-login-error');
+  const logoutButton = document.getElementById('logout-btn');
   const dashboardHTML = `
     <div class="personal-system-grid subsystem-dashboard">
       <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/accounting/">
@@ -165,6 +166,14 @@ redirect_from:
     dashboard.innerHTML = visible ? dashboardHTML : '';
     passwordInput.disabled = visible;
     if (!visible) passwordInput.focus();
+  }
+
+  function logout() {
+    if (!window.confirm('确定要退出登录吗？')) return;
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('loginTime');
+    if (window.subsystemSession) window.subsystemSession.updatePrivateNavigation();
+    setDashboardVisible(false);
   }
 
   async function getCloudPassword() {
@@ -219,6 +228,7 @@ redirect_from:
   passwordInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') verifyPassword();
   });
+  if (logoutButton) logoutButton.addEventListener('click', logout);
   localStorage.removeItem('isLoggedIn');
   localStorage.removeItem('loginTime');
   if (window.subsystemSession) window.subsystemSession.updatePrivateNavigation();

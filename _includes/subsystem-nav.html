@@ -2,7 +2,7 @@
 
 <nav class="subsystem-nav" aria-label="Personal system navigation">
   <a class="subsystem-nav__item{% if active == 'home' %} is-active{% endif %}" href="{{ '/subsystem/' | relative_url }}">Overview</a>
-  {% if page.subsystem_private %}
+  {% if page.subsystem_private or active == 'home' %}
     <button id="logout-btn" class="subsystem-nav__item subsystem-nav__logout subsystem-nav__private" type="button" data-subsystem-private hidden>退出</button>
   {% endif %}
 </nav>
