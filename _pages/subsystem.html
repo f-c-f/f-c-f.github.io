@@ -51,7 +51,8 @@ redirect_from:
   }
 
   .subsystem-nav__private[hidden],
-  .subsystem-dashboard[hidden] {
+  .subsystem-dashboard[hidden],
+  #subsystem-dashboard[hidden] {
     display: none !important;
   }
 
@@ -122,30 +123,7 @@ redirect_from:
   <p id="subsystem-login-error" class="subsystem-login__error" role="alert"></p>
 </section>
 
-<div id="subsystem-dashboard">
-
-<div class="personal-system-actions subsystem-dashboard" hidden>
-  <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/accounting/">进入Tools</a>
-</div>
-
-<div class="personal-system-grid subsystem-dashboard" hidden>
-  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/accounting/">
-    <strong>记账</strong>
-    <span>记录资产构成、消费统计和历史对比。</span>
-  </a>
-  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/diary/">
-    <strong>Note</strong>
-    <span>写Note、待办和知识记录。</span>
-  </a>
-  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/video/">
-    <strong>视频</strong>
-    <span>播放子系统视频列表中的本地视频。</span>
-  </a>
-  <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/weight/">
-    <strong>体重记录</strong>
-    <span>保存体重、目标体重并查看趋势图。</span>
-  </a>
-</div>
+<div id="subsystem-dashboard" hidden></div>
 
 <script>
 (() => {
@@ -153,10 +131,32 @@ redirect_from:
   const PASSWORD_PATH = 'config/loginPassword';
   const TIMEOUT_MS = 8000;
   const loginPanel = document.getElementById('subsystem-login');
-  const dashboardItems = document.querySelectorAll('.subsystem-dashboard');
+  const dashboard = document.getElementById('subsystem-dashboard');
   const passwordInput = document.getElementById('subsystem-password');
   const submitButton = document.getElementById('subsystem-login-submit');
   const errorMessage = document.getElementById('subsystem-login-error');
+  const dashboardHTML = `
+    <div class="personal-system-actions subsystem-dashboard">
+      <a class="btn btn--primary" href="{{ site.baseurl }}/subsystem/accounting/">进入Tools</a>
+    </div>
+    <div class="personal-system-grid subsystem-dashboard">
+      <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/accounting/">
+        <strong>记账</strong>
+        <span>记录资产构成、消费统计和历史对比。</span>
+      </a>
+      <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/diary/">
+        <strong>Note</strong>
+        <span>写Note、待办和知识记录。</span>
+      </a>
+      <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/video/">
+        <strong>视频</strong>
+        <span>播放子系统视频列表中的本地视频。</span>
+      </a>
+      <a class="personal-system-card" href="{{ site.baseurl }}/subsystem/weight/">
+        <strong>体重记录</strong>
+        <span>保存体重、目标体重并查看趋势图。</span>
+      </a>
+    </div>`;
 
   function getNextUrl() {
     const next = new URLSearchParams(window.location.search).get('next');
@@ -168,7 +168,8 @@ redirect_from:
     loginPanel.hidden = visible;
     loginPanel.setAttribute('aria-hidden', String(visible));
     loginPanel.style.display = visible ? 'none' : '';
-    dashboardItems.forEach((item) => { item.hidden = !visible; });
+    dashboard.hidden = !visible;
+    dashboard.innerHTML = visible ? dashboardHTML : '';
     passwordInput.disabled = visible;
     if (!visible) passwordInput.focus();
   }
@@ -216,22 +217,18 @@ redirect_from:
     passwordInput.blur();
     errorMessage.textContent = '';
     setDashboardVisible(true);
+    if (window.subsystemSession) window.subsystemSession.updatePrivateNavigation();
     const next = getNextUrl();
-    window.location.href = next ? `/subsystem/${next}` : '/subsystem/';
+    if (next) window.location.href = `/subsystem/${next}`;
   }
 
   submitButton.addEventListener('click', verifyPassword);
   passwordInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') verifyPassword();
   });
-  const loginTime = Number(localStorage.getItem('loginTime'));
-  const loginValid = localStorage.getItem('isLoggedIn') === 'true'
-    && Number.isFinite(loginTime)
-    && Date.now() - loginTime <= 180000;
-  if (!loginValid) {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('loginTime');
-  }
-  setDashboardVisible(loginValid);
+  localStorage.removeItem('isLoggedIn');
+  localStorage.removeItem('loginTime');
+  if (window.subsystemSession) window.subsystemSession.updatePrivateNavigation();
+  setDashboardVisible(false);
 })();
 </script>

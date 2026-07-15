@@ -49,7 +49,8 @@
 }
 
 .subsystem-nav__private[hidden],
-.subsystem-dashboard[hidden] {
+.subsystem-dashboard[hidden],
+#subsystem-dashboard[hidden] {
   display: none !important;
 }
 
