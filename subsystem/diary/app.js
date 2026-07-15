@@ -395,10 +395,57 @@ function continueMarkdownMarker(textarea, event) {
     textarea.setRangeText(`\n${markerMatch[1]}`, start, end, 'end');
 }
 
+function handleMarkdownTab(textarea, event) {
+    if (event.key !== 'Tab' || event.ctrlKey || event.altKey || event.metaKey) {
+        return;
+    }
+
+    event.preventDefault();
+
+    const indent = '    ';
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    if (start === end && !event.shiftKey) {
+        textarea.setRangeText(indent, start, end, 'end');
+        return;
+    }
+
+    const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
+    const lineEndIndex = textarea.value.indexOf('\n', end);
+    const lineEnd = lineEndIndex === -1 ? textarea.value.length : lineEndIndex;
+    const selectedLines = textarea.value.slice(lineStart, lineEnd);
+
+    if (!event.shiftKey) {
+        const indented = selectedLines.replace(/^/gm, indent);
+        textarea.setRangeText(indented, lineStart, lineEnd, 'select');
+        textarea.selectionStart = start + indent.length;
+        textarea.selectionEnd = end + (indented.length - selectedLines.length);
+        return;
+    }
+
+    let removedBeforeStart = 0;
+    let removedTotal = 0;
+    const unindented = selectedLines.replace(/^( {1,4}|\t)/gm, (match, leading, offset) => {
+        if (lineStart + offset < start) removedBeforeStart += leading.length;
+        removedTotal += leading.length;
+        return '';
+    });
+
+    textarea.setRangeText(unindented, lineStart, lineEnd, 'select');
+    textarea.selectionStart = Math.max(lineStart, start - removedBeforeStart);
+    textarea.selectionEnd = Math.max(textarea.selectionStart, end - removedTotal);
+}
+
+function handleMarkdownKeydown(textarea, event) {
+    handleMarkdownTab(textarea, event);
+    continueMarkdownMarker(textarea, event);
+}
+
 function initMarkdownEditors() {
     document.querySelectorAll('.markdown-editor').forEach(editor => {
         const textarea = editor.querySelector('.markdown-source');
-        textarea.addEventListener('keydown', event => continueMarkdownMarker(textarea, event));
+        textarea.addEventListener('keydown', event => handleMarkdownKeydown(textarea, event));
         editor.querySelectorAll('.markdown-tab').forEach(tab => {
             tab.addEventListener('click', () => setEditorMode(editor, tab.dataset.mode));
         });
