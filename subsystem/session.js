@@ -52,6 +52,42 @@
   }
 })();
 
+// Hide private Tools navigation until the current password session is valid.
+(function () {
+  const SESSION_TTL_MS = 180000;
+
+  function isLoggedIn() {
+    const loginTime = Number(localStorage.getItem('loginTime'));
+    return localStorage.getItem('isLoggedIn') === 'true'
+      && Number.isFinite(loginTime)
+      && Date.now() - loginTime <= SESSION_TTL_MS;
+  }
+
+  function clearExpiredSession() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('loginTime');
+  }
+
+  function updatePrivateNavigation() {
+    const visible = isLoggedIn();
+    if (!visible) clearExpiredSession();
+    document.querySelectorAll('[data-subsystem-private]').forEach((item) => {
+      item.hidden = !visible;
+    });
+  }
+
+  window.subsystemSession = {
+    isLoggedIn,
+    updatePrivateNavigation
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updatePrivateNavigation);
+  } else {
+    updatePrivateNavigation();
+  }
+})();
+
 // Keep the data pages usable when the Firebase ES module cannot load.
 (function () {
   if (window.firebase) return;
