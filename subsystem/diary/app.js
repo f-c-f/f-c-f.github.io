@@ -197,7 +197,7 @@ async function updateDefaultTitle() {
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
-        }) + ` (${weekday} ${lunarDate}) 的日记`;
+        }) + ` (${weekday} ${lunarDate}) 的Note`;
         console.log('默认标题:', defaultTitle);
         diaryTitle.value = defaultTitle;
         console.log('标题设置完成');
@@ -582,7 +582,7 @@ function getVisibleDiaries() {
     return filteredDiaries;
 }
 
-// 加载日记数据（本地优先秒开，云端静默同步）
+// 加载Note数据（本地优先秒开，云端静默同步）
 function loadDiaries() {
     // 1. 优先从本地缓存加载，立即渲染
     const cached = localStorage.getItem(DIARIES_CACHE_KEY);
@@ -617,7 +617,7 @@ function loadDiaries() {
     });
 }
 
-// 保存日记数据到本地+云端
+// 保存Note数据到本地+云端
 function saveDiaries() {
     localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
     if (window.firebase) {
@@ -626,7 +626,7 @@ function saveDiaries() {
     }
 }
 
-// 保存新日记
+// 保存新Note
 function saveDiary() {
     const title = document.getElementById('diary-title').value.trim();
     const content = document.getElementById('diary-content').value.trim();
@@ -634,7 +634,7 @@ function saveDiary() {
     const tag = document.querySelector('input[name="diary-tag"]:checked').value;
     
     if (!title || !content || !date) {
-        alert('请填写完整的日记信息');
+        alert('请填写完整的Note信息');
         return;
     }
     
@@ -665,10 +665,10 @@ function saveDiary() {
     // 重新生成默认标题
     updateDefaultTitle();
     
-    alert('日记保存成功！');
+    alert('Note保存成功！');
 }
 
-// 渲染日记列表
+// 渲染Note列表
 function renderDiaryList() {
     const diaryEntries = document.getElementById('diary-entries');
     sortDiaries();
@@ -677,9 +677,9 @@ function renderDiaryList() {
     
     if (filteredDiaries.length === 0) {
         if (currentFilterDate) {
-            diaryEntries.innerHTML = `<div class="empty-state">${currentFilterDate} 暂无日记</div>`;
+            diaryEntries.innerHTML = `<div class="empty-state">${currentFilterDate} 暂无Note</div>`;
         } else {
-            diaryEntries.innerHTML = '<div class="empty-state">暂无日记，开始写第一篇吧！</div>';
+            diaryEntries.innerHTML = '<div class="empty-state">暂无Note，开始写第一篇吧！</div>';
         }
         return;
     }
@@ -697,8 +697,8 @@ function renderDiaryList() {
         // 格式化日期显示
         const formattedDate = new Date(diary.date).toLocaleDateString('zh-CN');
         
-        // 获取标签，如果没有标签则默认为"日记"
-        const tag = diary.tag || '日记';
+        // 获取标签，如果没有标签则默认为"Note"
+        const tag = diary.tag || 'Note';
         
         diaryEl.innerHTML = `
             <h4>${escapeHtml(diary.title)}</h4>
@@ -833,7 +833,7 @@ function togglePinDiary(id) {
     renderDiaryList();
 }
 
-// 编辑日记
+// 编辑Note
 function editDiary(index) {
     currentEditIndex = index;
     const diary = diaries[index];
@@ -852,7 +852,7 @@ function editDiary(index) {
     document.getElementById('edit-modal').style.display = 'block';
 }
 
-// 更新日记
+// 更新Note
 function updateDiary() {
     const title = document.getElementById('edit-title').value.trim();
     const content = document.getElementById('edit-content').value.trim();
@@ -860,7 +860,7 @@ function updateDiary() {
     const tag = document.querySelector('input[name="edit-tag"]:checked').value;
     
     if (!title || !content || !date) {
-        alert('请填写完整的日记信息');
+        alert('请填写完整的Note信息');
         return;
     }
     
@@ -878,20 +878,20 @@ function updateDiary() {
     renderDiaryList();
     closeEditModal();
     
-    alert('日记更新成功！');
+    alert('Note更新成功！');
 }
 
-// 删除日记
+// 删除Note
 function deleteDiary(index) {
-    if (confirm('确定要删除这篇日记吗？')) {
+    if (confirm('确定要删除这篇Note吗？')) {
         diaries.splice(index, 1);
         saveDiaries();
         renderDiaryList();
-        alert('日记删除成功！');
+        alert('Note删除成功！');
     }
 }
 
-// 按日期过滤日记
+// 按日期过滤Note
 function filterDiariesByDate() {
     const filterDate = document.getElementById('filter-date').value;
     if (!filterDate) {

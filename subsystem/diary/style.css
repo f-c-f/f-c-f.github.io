@@ -1,4 +1,4 @@
-/* 日记模块样式：页面外壳由 Jekyll 主站布局提供 */
+/* Note模块样式：页面外壳由 Jekyll 主站布局提供 */
 
 .container {
     max-width: 1200px;
@@ -104,7 +104,7 @@ h3 {
     text-decoration: underline;
 }
 
-/* 日记输入区域样式 */
+/* Note输入区域样式 */
 .diary-input {
     background-color: white;
     border-radius: 8px;
@@ -334,7 +334,7 @@ h3 {
     color: #27ae60;
 }
 
-.tag.日记 {
+.tag.Note {
     background-color: #e3f2fd;
     color: #2196f3;
 }
@@ -454,7 +454,7 @@ h3 {
     background-color: #229954;
 }
 
-/* 日记列表区域样式 */
+/* Note列表区域样式 */
 .diary-list {
     background-color: white;
     border-radius: 8px;
@@ -645,7 +645,7 @@ h3 {
     accent-color: #27ae60;
 }
 
-/* 日记列表中的有序/无序列表，保持合理缩进 */
+/* Note列表中的有序/无序列表，保持合理缩进 */
 .diary-entry .content ul,
 .diary-entry .content ol {
     margin: 10px 0 10px 24px;

@@ -1,10 +1,10 @@
 ---
-title: "日记"
+title: "Note"
 permalink: /subsystem/diary/
 layout: subsystem
 subsystem_active: diary
 subsystem_private: true
-excerpt: "写日记、待办和知识记录。"
+excerpt: "写Note、待办和知识记录。"
 styles:
   - /subsystem/diary/style.css
 scripts:
@@ -101,12 +101,12 @@ scripts:
     </style>
     
     <div class="container">
-        <!-- 日记输入区域 -->
+        <!-- Note输入区域 -->
         <div class="diary-input">
-            <h2>写日记</h2>
+            <h2>写Note</h2>
             <div class="form-group">
                 <label for="diary-title">标题：</label>
-                <input type="text" id="diary-title" placeholder="请输入日记标题">
+                <input type="text" id="diary-title" placeholder="请输入Note标题">
             </div>
             <div class="form-group tag-group">
                 <label>标签：</label>
@@ -116,8 +116,8 @@ scripts:
                         待办
                     </label>
                     <label class="tag-option">
-                        <input type="radio" name="diary-tag" value="日记">
-                        日记
+                        <input type="radio" name="diary-tag" value="Note">
+                        Note
                     </label>
                     <label class="tag-option">
                         <input type="radio" name="diary-tag" value="知识">
@@ -147,7 +147,7 @@ scripts:
                         <button type="button" class="toolbar-btn" data-md-action="link" title="链接">链接</button>
                         <button type="button" class="toolbar-btn" data-md-action="code" title="行内代码">代码</button>
                     </div>
-                    <textarea id="diary-content" class="markdown-source" placeholder="用 Markdown 写日记，例如：&#10;&#10;## 今天&#10;&#10;- 完成了一件事&#10;- [ ] 明天要做的事"></textarea>
+                    <textarea id="diary-content" class="markdown-source" placeholder="用 Markdown 写Note，例如：&#10;&#10;## 今天&#10;&#10;- 完成了一件事&#10;- [ ] 明天要做的事"></textarea>
                     <div id="diary-content-preview" class="markdown-preview" hidden></div>
                     <p class="markdown-hint">支持标题、列表、待办、引用、链接、代码块等 Markdown 语法。</p>
                 </div>
@@ -156,12 +156,12 @@ scripts:
                 <label for="diary-date">日期：</label>
                 <input type="date" id="diary-date">
             </div>
-            <button id="save-diary">保存日记</button>
+            <button id="save-diary">保存Note</button>
         </div>
         
-        <!-- 日记列表区域 -->
+        <!-- Note列表区域 -->
         <div class="diary-list">
-            <h2>日记列表</h2>
+            <h2>Note列表</h2>
             <div class="filter-container">
                 <div class="date-filter">
                     <label for="filter-date">按日查看：</label>
@@ -173,7 +173,7 @@ scripts:
                     <select id="tag-filter">
                         <option value="all">全部</option>
                         <option value="待办">待办</option>
-                        <option value="日记">日记</option>
+                        <option value="Note">Note</option>
                         <option value="知识">知识</option>
                     </select>
                     <button id="reset-btn">重置</button>
@@ -183,15 +183,15 @@ scripts:
                 </div>
             </div>
             <div id="diary-entries">
-                <!-- 日记条目将通过JavaScript动态生成 -->
+                <!-- Note条目将通过JavaScript动态生成 -->
             </div>
         </div>
         
-        <!-- 编辑日记模态框 -->
+        <!-- 编辑Note模态框 -->
         <div id="edit-modal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h3>编辑日记</h3>
+                <h3>编辑Note</h3>
                 <div class="form-group">
                     <label for="edit-title">标题：</label>
                     <input type="text" id="edit-title">
@@ -204,8 +204,8 @@ scripts:
                             待办
                         </label>
                         <label class="tag-option">
-                            <input type="radio" name="edit-tag" value="日记">
-                            日记
+                            <input type="radio" name="edit-tag" value="Note">
+                            Note
                         </label>
                         <label class="tag-option">
                             <input type="radio" name="edit-tag" value="知识">
@@ -244,7 +244,7 @@ scripts:
                     <label for="edit-date">日期：</label>
                     <input type="date" id="edit-date">
                 </div>
-                <button id="update-diary">更新日记</button>
+                <button id="update-diary">更新Note</button>
                 <button id="cancel-edit">取消</button>
             </div>
         </div>

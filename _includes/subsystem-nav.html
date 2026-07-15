@@ -3,7 +3,7 @@
 <nav class="subsystem-nav" aria-label="Personal system navigation">
   <a class="subsystem-nav__item{% if active == 'home' %} is-active{% endif %}" href="{{ '/subsystem/' | relative_url }}">总览</a>
   <a class="subsystem-nav__item{% if active == 'accounting' %} is-active{% endif %}" href="{{ '/subsystem/accounting/' | relative_url }}">记账</a>
-  <a class="subsystem-nav__item{% if active == 'diary' %} is-active{% endif %}" href="{{ '/subsystem/diary/' | relative_url }}">日记</a>
+  <a class="subsystem-nav__item{% if active == 'diary' %} is-active{% endif %}" href="{{ '/subsystem/diary/' | relative_url }}">Note</a>
   <a class="subsystem-nav__item{% if active == 'video' %} is-active{% endif %}" href="{{ '/subsystem/video/' | relative_url }}">视频</a>
   <a class="subsystem-nav__item{% if active == 'weight' %} is-active{% endif %}" href="{{ '/subsystem/weight/' | relative_url }}">体重</a>
   {% if page.subsystem_private %}
