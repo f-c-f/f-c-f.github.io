@@ -48,6 +48,11 @@
   background: var(--global-code-background-color);
 }
 
+.subsystem-nav__private[hidden],
+.subsystem-dashboard[hidden] {
+  display: none !important;
+}
+
 .subsystem-nav__item {
   display: inline-flex;
   align-items: center;

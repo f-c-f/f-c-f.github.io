@@ -50,6 +50,11 @@ redirect_from:
     background: var(--global-link-color, #52adc8);
   }
 
+  .subsystem-nav__private[hidden],
+  .subsystem-dashboard[hidden] {
+    display: none !important;
+  }
+
   .personal-system-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
