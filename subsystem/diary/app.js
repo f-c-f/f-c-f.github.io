@@ -389,7 +389,15 @@ function continueMarkdownMarker(textarea, event) {
 
     const lineStart = textarea.value.lastIndexOf('\n', start - 1) + 1;
     const currentLine = textarea.value.slice(lineStart, start);
-    const markerMatch = currentLine.match(/^(\s*(?:[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|>\s+|\d+\.\s+))/);
+    const orderedMatch = currentLine.match(/^(\s*)(\d+)([.)]\s+)/);
+    if (orderedMatch) {
+        const nextNumber = Number(orderedMatch[2]) + 1;
+        event.preventDefault();
+        textarea.setRangeText(`\n${orderedMatch[1]}${nextNumber}${orderedMatch[3]}`, start, end, 'end');
+        return;
+    }
+
+    const markerMatch = currentLine.match(/^(\s*(?:[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|>\s+))/);
     if (!markerMatch) return;
 
     event.preventDefault();
