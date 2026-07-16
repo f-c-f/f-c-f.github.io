@@ -123,10 +123,26 @@
     if (!response.ok) throw new Error(`Firebase REST write failed: ${response.status}`);
   }
 
+  async function update(reference, value) {
+    const response = await fetch(makeUrl(reference.path), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(value)
+    });
+    if (!response.ok) throw new Error(`Firebase REST update failed: ${response.status}`);
+  }
+
+  async function remove(reference) {
+    const response = await fetch(makeUrl(reference.path), {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`Firebase REST delete failed: ${response.status}`);
+  }
+
   function onValue(reference, callback) {
     get(reference).then(callback).catch((error) => console.error(error));
     return () => {};
   }
 
-  window.firebase = { database, ref, get, set, onValue };
+  window.firebase = { database, ref, get, set, update, remove, onValue };
 })();

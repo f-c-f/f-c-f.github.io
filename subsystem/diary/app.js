@@ -229,6 +229,7 @@ function logout() {
 };
 
 const DIARIES_CACHE_KEY = 'diaries_cache';
+const DIARIES_BACKUP_KEY = 'diaries_cache_backup';
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -489,6 +490,50 @@ function normalizeDiaries() {
     return changed;
 }
 
+function getDiaryKey(diary) {
+    if (!diary || typeof diary !== 'object') return '';
+    return diary.id || [diary.date, diary.title, diary.content].join('|');
+}
+
+function mergeDiaryLists(primary, secondary) {
+    const merged = [];
+    const seen = new Set();
+
+    [...primary, ...secondary].forEach(diary => {
+        const key = getDiaryKey(diary);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        merged.push(diary);
+    });
+
+    return merged;
+}
+
+function coerceDiaryList(value) {
+    const list = Array.isArray(value)
+        ? value.filter(Boolean)
+        : value && typeof value === 'object'
+            ? Object.values(value).filter(Boolean)
+            : [];
+    return mergeDiaryLists(list, []);
+}
+
+function toDiaryRecordMap(list) {
+    return list.reduce((records, diary) => {
+        const key = getDiaryKey(diary);
+        if (key) records[key] = diary;
+        return records;
+    }, {});
+}
+
+function saveLocalDiaries() {
+    const previousCache = localStorage.getItem(DIARIES_CACHE_KEY);
+    if (previousCache) {
+        localStorage.setItem(DIARIES_BACKUP_KEY, previousCache);
+    }
+    localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
+}
+
 function sortDiaries() {
     diaries.sort((a, b) => {
         if (!!a.pinned !== !!b.pinned) {
@@ -591,7 +636,7 @@ function loadDiaries() {
             const data = JSON.parse(cached);
             diaries = Array.isArray(data) ? data : [];
             const changed = normalizeDiaries();
-            if (changed) saveDiaries();
+            if (changed) saveLocalDiaries();
             renderDiaryList();
         } catch (_) { diaries = []; }
     } else {
@@ -605,11 +650,23 @@ function loadDiaries() {
     const { database, ref, get } = window.firebase;
     get(ref(database, 'diaries')).then((snapshot) => {
         if (snapshot.exists()) {
-            const cloudDiaries = snapshot.val();
-            diaries = Array.isArray(cloudDiaries) ? cloudDiaries : Object.values(cloudDiaries || {});
+            const localDiaries = diaries;
+            const cloudValue = snapshot.val();
+            const cloudWasArray = Array.isArray(cloudValue);
+            const cloudDiaries = coerceDiaryList(cloudValue);
+            diaries = cloudDiaries;
             const changed = normalizeDiaries();
-            localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
-            if (changed) saveDiaries();
+
+            if (localDiaries.length > diaries.length) {
+                console.warn('Local diary cache has more entries than cloud; merging to avoid data loss.');
+                diaries = mergeDiaryLists(localDiaries, diaries);
+                normalizeDiaries();
+                saveDiaries({ allowShrink: false });
+            } else if (changed || cloudWasArray) {
+                saveDiaries({ allowShrink: false });
+            } else {
+                localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
+            }
         }
         renderDiaryList();
     }).catch((e) => {
@@ -618,12 +675,70 @@ function loadDiaries() {
 }
 
 // 保存Note数据到本地+云端
-function saveDiaries() {
-    localStorage.setItem(DIARIES_CACHE_KEY, JSON.stringify(diaries));
+function saveDiaries(options = {}) {
+    const { allowShrink = false } = options;
+    saveLocalDiaries();
     if (window.firebase) {
-        const { database, ref, set } = window.firebase;
-        set(ref(database, 'diaries'), diaries).catch((e) => console.error('Error saving diaries:', e));
+        const { database, ref, set, get } = window.firebase;
+        const diaryRef = ref(database, 'diaries');
+        const writeDiaries = () => set(diaryRef, toDiaryRecordMap(diaries)).catch((e) => console.error('Error saving diaries:', e));
+
+        if (allowShrink || typeof get !== 'function') {
+            writeDiaries();
+            return;
+        }
+
+        get(diaryRef).then((snapshot) => {
+            if (!snapshot.exists()) {
+                writeDiaries();
+                return;
+            }
+
+            const cloudDiaries = coerceDiaryList(snapshot.val());
+            if (cloudDiaries.length > diaries.length) {
+                console.warn('Cloud has more diary entries than current state; merging before save.');
+                diaries = mergeDiaryLists(diaries, cloudDiaries);
+                normalizeDiaries();
+                saveLocalDiaries();
+            }
+
+            writeDiaries();
+        }).catch((e) => {
+            console.error('Error checking cloud diaries before save:', e);
+            writeDiaries();
+        });
     }
+}
+
+function saveDiaryEntry(diary) {
+    saveLocalDiaries();
+
+    if (!window.firebase || !diary) return;
+
+    const { database, ref, update } = window.firebase;
+    if (typeof update !== 'function') {
+        saveDiaries();
+        return;
+    }
+
+    update(ref(database, `diaries/${getDiaryKey(diary)}`), diary)
+        .catch((e) => {
+            console.error('Error saving diary entry:', e);
+            saveDiaries();
+        });
+}
+
+function deleteDiaryEntryFromCloud(diary) {
+    if (!window.firebase || !diary) return;
+
+    const { database, ref, remove } = window.firebase;
+    if (typeof remove !== 'function') {
+        saveDiaries({ allowShrink: true });
+        return;
+    }
+
+    remove(ref(database, `diaries/${getDiaryKey(diary)}`))
+        .catch((e) => console.error('Error deleting diary entry:', e));
 }
 
 // 保存新Note
@@ -650,7 +765,7 @@ function saveDiary() {
     };
     
     diaries.unshift(newDiary); // 添加到数组开头
-    saveDiaries();
+    saveDiaryEntry(newDiary);
     renderDiaryList();
     
     // 清空输入表单
@@ -755,7 +870,7 @@ function enableMarkdownTaskCheckboxes(diaryEl, diary) {
                         : match;
                 }
             );
-            saveDiaries();
+            saveDiaryEntry(diary);
             renderDiaryList();
         });
     });
@@ -828,8 +943,7 @@ function togglePinDiary(id) {
     diary.order = getTopOrderForGroup(diary.pinned);
 
     sortDiaries();
-    reindexDiaries();
-    saveDiaries();
+    saveDiaryEntry(diary);
     renderDiaryList();
 }
 
@@ -864,7 +978,7 @@ function updateDiary() {
         return;
     }
     
-    diaries[currentEditIndex] = {
+    const updatedDiary = {
         ...diaries[currentEditIndex],
         title: title,
         content: content,
@@ -872,9 +986,10 @@ function updateDiary() {
         date: date,
         tag: tag
     };
+    diaries[currentEditIndex] = updatedDiary;
     
     sortDiaries();
-    saveDiaries();
+    saveDiaryEntry(updatedDiary);
     renderDiaryList();
     closeEditModal();
     
@@ -884,8 +999,9 @@ function updateDiary() {
 // 删除Note
 function deleteDiary(index) {
     if (confirm('确定要删除这篇Note吗？')) {
-        diaries.splice(index, 1);
-        saveDiaries();
+        const [deletedDiary] = diaries.splice(index, 1);
+        saveLocalDiaries();
+        deleteDiaryEntryFromCloud(deletedDiary);
         renderDiaryList();
         alert('Note删除成功！');
     }
