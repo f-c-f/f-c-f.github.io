@@ -397,7 +397,14 @@ function continueMarkdownMarker(textarea, event) {
         return;
     }
 
-    const markerMatch = currentLine.match(/^(\s*(?:[-*+]\s+\[[ xX]\]\s+|[-*+]\s+|>\s+))/);
+    const taskMatch = currentLine.match(/^(\s*[-*+]\s+)\[[ xX]\](\s+)/);
+    if (taskMatch) {
+        event.preventDefault();
+        textarea.setRangeText(`\n${taskMatch[1]}[ ]${taskMatch[2]}`, start, end, 'end');
+        return;
+    }
+
+    const markerMatch = currentLine.match(/^(\s*(?:[-*+]\s+|>\s+))/);
     if (!markerMatch) return;
 
     event.preventDefault();
