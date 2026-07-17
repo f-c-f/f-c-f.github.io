@@ -261,17 +261,30 @@ function sanitizeHtml(html) {
     return template.innerHTML;
 }
 
+function renderBasicMarkdown(source) {
+    return source.split('\n').map(line => {
+        const heading = line.match(/^( {0,3})(#{1,6})(?:[ \t]+|$)(.*)$/);
+        if (heading) {
+            const level = heading[2].length;
+            const text = heading[3].replace(/[ \t]+#+[ \t]*$/, '');
+            return `<h${level}>${escapeHtml(text)}</h${level}>`;
+        }
+        return escapeHtml(line);
+    }).join('<br>');
+}
+
 function renderMarkdown(markdown) {
     // GFM 要求任务框后有空格；这里兼容用户手写的 `- [ ]内容`。
     const source = String(markdown ?? '').replace(
         /^(\s*[-*+]\s+\[[ xX]\])(?=\S)/gm,
         '$1 '
     );
-    if (!window.marked) {
-        return escapeHtml(source).replace(/\n/g, '<br>');
+    const markedParser = window.marked && (window.marked.parse || window.marked.marked);
+    if (typeof markedParser !== 'function') {
+        return renderBasicMarkdown(source);
     }
 
-    const rendered = window.marked.parse(source, { gfm: true, breaks: true });
+    const rendered = markedParser(source, { gfm: true, breaks: true });
     return sanitizeHtml(rendered);
 }
 
@@ -319,6 +332,10 @@ function getDiaryRenderedContent(diary) {
     return diary.contentFormat === 'markdown'
         ? renderMarkdown(diary.content)
         : sanitizeHtml(diary.content || '');
+}
+
+function inferContentFormat(content) {
+    return /<\/?[a-z][\s\S]*>/i.test(String(content || '')) ? 'html' : 'markdown';
 }
 
 function setEditorMode(editor, mode) {
@@ -494,7 +511,7 @@ function normalizeDiaries() {
         }
 
         if (normalized.contentFormat !== 'markdown' && normalized.contentFormat !== 'html') {
-            normalized.contentFormat = 'html';
+            normalized.contentFormat = inferContentFormat(normalized.content);
             changed = true;
         }
 
