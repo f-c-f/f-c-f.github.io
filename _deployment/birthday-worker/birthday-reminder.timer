@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily birthday check at 09:00 Beijing time
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Asia/Shanghai
+Persistent=true
+AccuracySec=1min
+Unit=birthday-reminder.service
+
+[Install]
+WantedBy=timers.target

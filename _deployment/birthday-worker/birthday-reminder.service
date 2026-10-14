@@ -1,0 +1,21 @@
+[Unit]
+Description=Personal birthday email reminders
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=birthday-reminder
+Group=birthday-reminder
+WorkingDirectory=/opt/birthday-reminder
+EnvironmentFile=-/etc/birthday-reminder/secrets.env
+ExecStart=/usr/bin/flock -n /var/lib/birthday-reminder/run.lock /usr/bin/node /opt/birthday-reminder/worker.cjs
+StateDirectory=birthday-reminder
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+TimeoutStartSec=300
+

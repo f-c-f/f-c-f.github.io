@@ -34,7 +34,9 @@ scripts:
         <label for="birthday-lunar-day">农历日<select id="birthday-lunar-day"></select></label>
       </div>
       <p id="birthday-conversion" class="birthday-hint" aria-live="polite"></p>
-      <label class="birthday-check"><input id="birthday-reminder" type="checkbox">开启日历提醒（提前七天、提前一天、当天）</label>
+      <label class="birthday-check"><input id="birthday-email-reminder" type="checkbox" checked>开启邮件提醒（提前七天、提前一天、当天）</label>
+      <p class="birthday-hint">每天北京时间上午 9 点检查并发送邮件，无需打开网页或导入日历。取消勾选并保存，即可关闭该亲友的后续邮件提醒。</p>
+      <label class="birthday-check"><input id="birthday-reminder" type="checkbox" checked>开启日历提醒（提前七天、提前一天、当天）</label>
       <p class="birthday-hint">农历生日逐年换算为公历；闰月生日在无对应闰月的年份按同名普通月，当月无三十则按廿九。公历 2 月 29 日在非闰年按 2 月 28 日计算。</p>
       <div class="birthday-actions">
         <button id="birthday-save" type="submit">保存生日</button>
@@ -51,10 +53,10 @@ scripts:
   </section>
 
   <section class="birthday-panel">
-    <h2>可选提醒</h2>
+    <h2>可选日历提醒</h2>
     <p>勾选需要提醒的亲友后，下载日历文件并导入手机或电脑日历。农历生日会逐年换算为当年的公历日期。每次生日安排三次提醒：提前七天、提前一天及当天，均为北京时间上午 9 点。</p>
     <button id="birthday-calendar" type="button" disabled>下载提醒日历 (.ics)</button>
     <p class="birthday-hint">包含未来十年的生日。提醒由日历应用发送，网页关闭后也可使用；请允许日历通知，并检查导入后是否保留三次提醒。部分日历应用可能忽略导入的提醒，需要在日历中手动设置。修改、删除生日或关闭提醒后，请删除原先导入的对应日历事件，再重新导入。建议使用单独的“亲友生日”日历。</p>
-    <p class="birthday-hint">当前使用日历通知，不发送邮件。邮件提醒需要另行配置定时发送服务。</p>
+    <p class="birthday-hint">邮件提醒和日历提醒相互独立。邮件由后台自动发送；日历提醒需下载并导入后使用。</p>
   </section>
 </div>
