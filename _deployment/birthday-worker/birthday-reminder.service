@@ -18,4 +18,3 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 TimeoutStartSec=300
-
