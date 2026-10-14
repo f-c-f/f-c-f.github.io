@@ -1,0 +1,60 @@
+---
+title: "生日记录"
+permalink: /subsystem/birthday/
+layout: subsystem
+subsystem_active: birthday
+subsystem_private: true
+excerpt: "记住亲朋好友的生日，让每一份祝福准时到达。"
+styles:
+  - /subsystem/birthday/style.css
+scripts:
+  - /subsystem/birthday/lunar.js
+  - /subsystem/birthday/dates.js
+  - /subsystem/birthday/app.js
+---
+
+<div id="birthday-app" class="birthday-app" hidden>
+  <section class="birthday-panel">
+    <h2 id="form-title">添加生日</h2>
+    <form id="birthday-form">
+      <label for="birthday-calendar-type">历法
+        <select id="birthday-calendar-type"><option value="solar">公历（阳历）</option><option value="lunar">农历（阴历）</option></select>
+      </label>
+      <div class="birthday-fields">
+        <label for="birthday-name">姓名
+          <input id="birthday-name" type="text" maxlength="80" placeholder="输入亲友姓名" required autocomplete="off">
+        </label>
+        <label id="birthday-solar-field" for="birthday-date">出生日期（公历）
+          <input id="birthday-date" type="date" min="1900-01-01" required>
+        </label>
+      </div>
+      <div id="birthday-lunar-fields" class="birthday-lunar-fields" hidden>
+        <label for="birthday-lunar-year">农历出生年<select id="birthday-lunar-year"></select></label>
+        <label for="birthday-lunar-month">农历月<select id="birthday-lunar-month"></select></label>
+        <label for="birthday-lunar-day">农历日<select id="birthday-lunar-day"></select></label>
+      </div>
+      <p id="birthday-conversion" class="birthday-hint" aria-live="polite"></p>
+      <label class="birthday-check"><input id="birthday-reminder" type="checkbox">开启日历提醒（提前七天、提前一天、当天）</label>
+      <p class="birthday-hint">农历生日逐年换算为公历；闰月生日在无对应闰月的年份按同名普通月，当月无三十则按廿九。公历 2 月 29 日在非闰年按 2 月 28 日计算。</p>
+      <div class="birthday-actions">
+        <button id="birthday-save" type="submit">保存生日</button>
+        <button id="birthday-cancel" type="button" class="secondary" hidden>取消编辑</button>
+      </div>
+    </form>
+  </section>
+
+  <p id="birthday-status" role="status" aria-live="polite"></p>
+  <section class="birthday-panel">
+    <div class="birthday-heading"><h2>亲友生日 <span id="birthday-count"></span></h2><button id="birthday-reload" type="button" class="secondary">刷新</button></div>
+    <p id="birthday-empty">正在加载生日记录…</p>
+    <div id="birthday-list" class="birthday-list"></div>
+  </section>
+
+  <section class="birthday-panel">
+    <h2>可选提醒</h2>
+    <p>勾选需要提醒的亲友后，下载日历文件并导入手机或电脑日历。农历生日会逐年换算为当年的公历日期。每次生日安排三次提醒：提前七天、提前一天及当天，均为北京时间上午 9 点。</p>
+    <button id="birthday-calendar" type="button" disabled>下载提醒日历 (.ics)</button>
+    <p class="birthday-hint">包含未来十年的生日。提醒由日历应用发送，网页关闭后也可使用；请允许日历通知，并检查导入后是否保留三次提醒。部分日历应用可能忽略导入的提醒，需要在日历中手动设置。修改、删除生日或关闭提醒后，请删除原先导入的对应日历事件，再重新导入。建议使用单独的“亲友生日”日历。</p>
+    <p class="birthday-hint">当前使用日历通知，不发送邮件。邮件提醒需要另行配置定时发送服务。</p>
+  </section>
+</div>

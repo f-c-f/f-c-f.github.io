@@ -1,0 +1,26 @@
+.birthday-app { max-width: 960px; margin: 0 auto; }
+.birthday-app[hidden], .birthday-app [hidden] { display: none !important; }
+.birthday-panel { padding: 1.4rem; margin-bottom: 1.25rem; border: 1px solid var(--global-border-color, #d8dee4); border-radius: 8px; background: var(--global-bg-color, #fff); }
+.birthday-panel h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.birthday-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.birthday-fields label { font-weight: 600; }
+.birthday-app select { display: block; width: 100%; padding: .7rem; margin: .4rem 0 1rem; border: 1px solid var(--global-border-color, #d8dee4); border-radius: 4px; background: var(--global-bg-color, #fff); color: var(--global-text-color, #494e52); font: inherit; }
+.birthday-lunar-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
+.birthday-fields input { display: block; width: 100%; box-sizing: border-box; margin-top: .4rem; padding: .7rem; color: var(--global-text-color, #494e52); background: var(--global-bg-color, #fff); border: 1px solid var(--global-border-color, #d8dee4); border-radius: 4px; font: inherit; }
+.birthday-check { display: flex; gap: .6rem; align-items: center; margin-top: 1rem; }
+.birthday-check input { width: auto; margin: 0; }
+.birthday-app button { padding: .55rem .9rem; background: var(--global-link-color, #287e98); border: 1px solid transparent; border-radius: 4px; color: white; cursor: pointer; font: inherit; font-size: .85rem; }
+.birthday-app button.secondary { background: var(--global-code-background-color, #fafafa); color: var(--global-text-color, #494e52); border-color: var(--global-border-color, #d8dee4); }
+.birthday-app button:disabled { opacity: .5; cursor: not-allowed; }
+.birthday-app button:focus-visible, .birthday-app input:focus-visible { outline: 2px solid var(--global-link-color, #287e98); outline-offset: 3px; }
+.birthday-actions, .birthday-heading { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.birthday-heading { justify-content: space-between; margin-bottom: 1rem; }
+.birthday-heading h2 { margin: 0; }
+.birthday-hint, #birthday-count, .birthday-detail { color: var(--global-text-color-light, #6a737d); font-size: .85rem; }
+.birthday-hint { margin: .8rem 0; line-height: 1.7; }
+.birthday-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--global-border-color, #d8dee4); }
+.birthday-row strong { overflow-wrap: anywhere; }
+.birthday-detail { margin: .35rem 0 0; }
+.birthday-countdown { display: block; margin-top: .4rem; color: var(--global-link-color, #287e98); font-weight: 600; }
+#birthday-status { min-height: 1.5em; font-size: .9rem; }
+@media (max-width: 600px) { .birthday-fields { grid-template-columns: 1fr; } .birthday-row { align-items: flex-start; flex-direction: column; } .birthday-panel { padding: 1rem; } }
