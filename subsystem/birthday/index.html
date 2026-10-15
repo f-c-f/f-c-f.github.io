@@ -1,18 +1,29 @@
 ---
-title: "生日记录"
+title: "生日与倒数"
 permalink: /subsystem/birthday/
 layout: subsystem
 subsystem_active: birthday
 subsystem_private: true
-excerpt: "记住亲朋好友的生日，让每一份祝福准时到达。"
+excerpt: "记住亲友生日，也为每一个重要日子倒数。"
 styles:
   - /subsystem/birthday/style.css
 scripts:
   - /subsystem/birthday/lunar.js
   - /subsystem/birthday/dates.js
   - /subsystem/birthday/app.js
+  - /subsystem/countdown/dates.js
+  - /subsystem/countdown/app.js
+  - /subsystem/birthday/kind.js
 ---
 
+<div class="birthday-app birthday-kind-picker">
+  <label for="birthday-kind">记录类型</label>
+  <select id="birthday-kind" aria-controls="birthday-kind-birthday birthday-kind-countdown">
+    <option value="birthday">生日（每年重复）</option>
+    <option value="countdown">日期倒数（指定日期）</option>
+  </select>
+</div>
+<div id="birthday-kind-birthday">
 <div id="birthday-app" class="birthday-app" hidden>
   <section class="birthday-panel">
     <h2 id="form-title">添加生日</h2>
@@ -59,4 +70,8 @@ scripts:
     <p class="birthday-hint">包含未来十年的生日。提醒由日历应用发送，网页关闭后也可使用；请允许日历通知，并检查导入后是否保留三次提醒。部分日历应用可能忽略导入的提醒，需要在日历中手动设置。修改、删除生日或关闭提醒后，请删除原先导入的对应日历事件，再重新导入。建议使用单独的“亲友生日”日历。</p>
     <p class="birthday-hint">邮件提醒和日历提醒相互独立。邮件由后台自动发送；日历提醒需下载并导入后使用。</p>
   </section>
+</div>
+</div>
+<div id="birthday-kind-countdown" hidden>
+  {% include countdown-form.html %}
 </div>

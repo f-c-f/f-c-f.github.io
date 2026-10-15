@@ -1,0 +1,26 @@
+<div id="countdown-app" class="birthday-app" hidden>
+  <section class="birthday-panel">
+    <h2 id="countdown-form-title">添加日期倒数</h2>
+    <form id="countdown-form">
+      <div class="birthday-fields">
+        <label for="countdown-name">事项名称
+          <input id="countdown-name" type="text" maxlength="80" placeholder="例如：旅行出发、考试、项目截止" required autocomplete="off">
+        </label>
+        <label for="countdown-date">目标日期（公历）
+          <input id="countdown-date" type="date" min="1900-01-01" max="9999-12-31" required>
+        </label>
+      </div>
+      <p class="birthday-hint">过去和未来的日期都可以选择，按北京时间计算天数。目标日当天显示“就是今天”，到期后保留记录并显示已过去的天数，不会自动变成每年重复的日期。</p>
+      <div class="birthday-actions">
+        <button id="countdown-save" type="submit" disabled>保存倒数</button>
+        <button id="countdown-cancel" type="button" class="secondary" hidden>取消编辑</button>
+      </div>
+    </form>
+  </section>
+  <p id="countdown-status" role="status" aria-live="polite"></p>
+  <section class="birthday-panel">
+    <div class="birthday-heading"><h2>重要日期 <span id="countdown-count"></span></h2><button id="countdown-reload" class="secondary" type="button">刷新</button></div>
+    <p id="countdown-empty">正在加载日期记录…</p>
+    <div id="countdown-list" class="birthday-list"></div>
+  </section>
+</div>

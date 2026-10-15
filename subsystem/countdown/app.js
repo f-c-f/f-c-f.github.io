@@ -7,7 +7,7 @@
   function session() {
     if (window.subsystemSession.isLoggedIn()) return true;
     $('countdown-app').hidden = true;
-    window.location.href = '/subsystem/?next=countdown/';
+    window.location.href = '/subsystem/?next=birthday/';
     return false;
   }
   function status(message) { $('countdown-status').textContent = message; }
