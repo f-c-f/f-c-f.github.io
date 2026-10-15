@@ -7,6 +7,25 @@ const os = require('node:os');
 const path = require('node:path');
 const dates = require('./dates.js');
 const solar = (date, enabled = true) => ({ name: '测试亲友', date, calendar: 'solar', emailReminder: enabled });
+test('日期倒数按完整日期提醒，支持未来年份且过期不逐年重复', () => {
+  const record = { name: '旅行', kind: 'countdown', date: '2030-01-01', emailReminder: true };
+  for (const [current, days] of [['2029-12-25', 7], ['2029-12-31', 1], ['2030-01-01', 0]]) {
+    const result = dueReminders({ trip: record }, current);
+    assert.equal(result.due[0].days, days);
+    assert.equal(result.due[0].kind, 'countdown');
+  }
+  assert.equal(dueReminders({ trip: record }, '2026-12-25').due.length, 0);
+  assert.equal(dueReminders({ trip: record }, '2030-01-02').due.length, 0);
+  assert.equal(dueReminders({ trip: record }, '2031-01-01').due.length, 0);
+  assert.equal(dueReminders({ trip: { ...record, emailReminder: false } }, '2030-01-01').due.length, 0);
+});
+test('倒数和生日不共用去重键，邮件内容包含事项和目标日期', () => {
+  const item = { id: 'same', birthday: '2030-01-01', days: 1 };
+  const countdown = { ...item, name: '旅行', kind: 'countdown' };
+  assert.notEqual(deliveryKey(item, 'test@example.com'), deliveryKey(countdown, 'test@example.com'));
+  assert.ok(require('./worker.cjs').message(countdown).subject.includes('旅行'));
+  assert.ok(require('./worker.cjs').message(countdown).text.includes('2030-01-01'));
+});
 test('只有明确开启邮件提醒的记录会进入7/1/0天提醒', () => {
   const result = dueReminders({ seven: solar('2000-10-21'), one: solar('2000-10-15'), today: solar('2000-10-14'), none: solar('2000-10-16'), off: solar('2000-10-14', false), calendarOnly: { name: '仅日历', date: '2000-10-14', reminder: true } }, '2026-10-14');
   assert.deepEqual(result.due.map((item) => item.days), [7, 1, 0]);
@@ -48,9 +67,9 @@ async function harness(mode, run) {
 test('预览模式只读数据库，不发送邮件或记录已发送', async () => {
   await harness('dry-run', async ({ data, stateDir }) => {
     let calls = 0;
-    global.fetch = async (url) => { assert.ok(url.endsWith('/birthdays.json')); calls++; return { ok: true, json: async () => data }; };
+    global.fetch = async (url) => { assert.ok(/\/(birthdays|countdowns)\.json$/.test(url)); calls++; return { ok: true, json: async () => url.endsWith('/birthdays.json') ? data : null }; };
     await main([]);
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
     const result = JSON.parse(await fs.readFile(path.join(stateDir, 'last-run.json'), 'utf8'));
     assert.equal(result.due, 1); assert.equal(result.sent, 0); assert.equal(result.mode, 'dry-run');
     await assert.rejects(fs.readFile(path.join(stateDir, 'sent.json')), { code: 'ENOENT' });
@@ -60,6 +79,7 @@ test('邮件成功后写入去重记录，重复运行不重复发送', async ()
   await harness('send', async ({ data, stateDir }) => {
     let emails = 0;
     global.fetch = async (url, options) => {
+      if (url.endsWith('/countdowns.json')) return { ok: true, json: async () => null };
       if (url.endsWith('/birthdays.json')) return { ok: true, json: async () => data };
       assert.equal(url, 'https://api.resend.com/emails'); assert.equal(options.method, 'POST');
       assert.ok(options.headers['Idempotency-Key']);
@@ -75,6 +95,7 @@ test('发送失败不误记成功，稍后重试使用相同幂等键', async ()
   await harness('send', async ({ data, stateDir }) => {
     const keys = [];
     global.fetch = async (url, options) => {
+      if (url.endsWith('/countdowns.json')) return { ok: true, json: async () => null };
       if (url.endsWith('/birthdays.json')) return { ok: true, json: async () => data };
       keys.push(options.headers['Idempotency-Key']);
       return keys.length === 1 ? { ok: false, status: 503 } : { ok: true, json: async () => ({ id: 'fake-retry-receipt' }) };
@@ -96,5 +117,24 @@ test('测试邮件可独立发送，每日任务仍保持预览模式', async ()
     await main(['--test-email']); assert.equal(calls, 1);
     await assert.rejects(fs.readFile(path.join(stateDir, 'sent.json')), { code: 'ENOENT' });
     await assert.rejects(main(['--test-email', '--dry-run']), /Cannot combine/);
+  });
+});
+test('同一集合中的倒数与旧倒数集合均会提醒，并保持发送去重', async () => {
+  await harness('send', async ({ data }) => {
+    const current = dates.today();
+    data.trip = { name: '新倒数', kind: 'countdown', date: current, emailReminder: true };
+    const legacy = { old: { name: '旧倒数', date: current, emailReminder: true }, disabled: { name: '未开启', date: current } };
+    const messages = [];
+    global.fetch = async (url, options) => {
+      if (url.endsWith('/birthdays.json')) return { ok: true, json: async () => data };
+      if (url.endsWith('/countdowns.json')) return { ok: true, json: async () => legacy };
+      assert.equal(url, 'https://api.resend.com/emails');
+      messages.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ id: `fake-${messages.length}` }) };
+    };
+    await main([]); await main([]);
+    assert.equal(messages.length, 3);
+    assert.equal(messages.filter(mail => mail.subject.startsWith('日期提醒')).length, 2);
+    assert.equal(messages.filter(mail => mail.subject.startsWith('生日提醒')).length, 1);
   });
 });

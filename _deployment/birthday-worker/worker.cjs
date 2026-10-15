@@ -13,6 +13,13 @@ function dueReminders(data, current = dates.today()) {
     if (!record || record.emailReminder !== true) continue;
     enabled++;
     try {
+      if (record.kind === 'countdown') {
+        if (typeof record.name !== 'string' || !record.name.trim() || record.name.length > 80 || !dates.parse(record.date)) throw new Error('Invalid countdown');
+        const days = Math.round((Date.parse(record.date) - Date.parse(current)) / 86400000);
+        if ([7, 1, 0].includes(days)) due.push({ id, kind: 'countdown', name: record.name.trim(), birthday: record.date, days });
+        continue;
+      }
+      if (record.kind && record.kind !== 'birthday') throw new Error('Invalid record kind');
       if (typeof record.name !== 'string' || !record.name.trim() || record.name.length > 80 || !dates.parse(record.date) || record.date > current) throw new Error('Invalid birthday');
       if (record.calendar === 'lunar') {
         const lunar = record.lunar;
@@ -26,10 +33,13 @@ function dueReminders(data, current = dates.today()) {
 }
 function message(item) {
   const when = item.days === 0 ? '今天' : `${item.days} 天后`;
+  if (item.kind === 'countdown') return { subject: `日期提醒：${item.name}${when}到来`, text: `${item.name}${when}到来。\n目标公历日期：${item.birthday}\n\n此提醒来自你的生日与倒数工具（北京时间）。` };
   return { subject: `生日提醒：${item.name}${when}过生日`, text: `${item.name}的${item.calendar === 'lunar' ? '农历' : '公历'}生日${when}到来。\n本次对应公历日期：${item.birthday}\n记得提前准备祝福。\n\n此提醒来自你的亲友生日工具（北京时间）。` };
 }
 function deliveryKey(item, recipient) {
-  return crypto.createHash('sha256').update(JSON.stringify([item.id, item.birthday, item.days, recipient])).digest('hex');
+  const fields = [item.id, item.birthday, item.days, recipient];
+  if (item.kind === 'countdown') fields.unshift('countdown');
+  return crypto.createHash('sha256').update(JSON.stringify(fields)).digest('hex');
 }
 async function request(url, options = {}) {
   const response = await fetch(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(20000) });
@@ -65,9 +75,17 @@ async function main(args = process.argv.slice(2)) {
   }
   const headers = { Accept: 'application/json' };
   if (process.env.FIREBASE_ACCESS_TOKEN) headers.Authorization = `Bearer ${process.env.FIREBASE_ACCESS_TOKEN}`;
-  const data = await request(`${config.databaseUrl.replace(/\/$/, '')}/birthdays.json`, { headers });
+  const base = config.databaseUrl.replace(/\/$/, '');
+  const [data, legacy] = await Promise.all([
+    request(`${base}/birthdays.json`, { headers }),
+    request(`${base}/countdowns.json`, { headers })
+  ]);
+  if (legacy !== null && (!legacy || typeof legacy !== 'object' || Array.isArray(legacy))) throw new Error('Invalid legacy countdowns');
+  if (data !== null && (!data || typeof data !== 'object' || Array.isArray(data))) throw new Error('Invalid birthdays database response');
+  const combined = Object.assign(Object.create(null), data || {});
+  for (const [id, record] of Object.entries(legacy || {})) combined[`legacy-countdown:${id}`] = { ...record, kind: 'countdown' };
   const current = dates.today();
-  const result = dueReminders(data, current);
+  const result = dueReminders(combined, current);
   let sent = 0, alreadySent = 0;
   for (const item of result.due) {
     const key = deliveryKey(item, recipients);
@@ -84,7 +102,7 @@ async function main(args = process.argv.slice(2)) {
   const summary = { event: 'birthday_check', time: new Date().toISOString(), beijingDate: current, mode: dryRun ? 'dry-run' : 'send', total: result.total, enabled: result.enabled, invalid: result.invalid, due: result.due.length, alreadySent, sent };
   await fs.writeFile(path.join(stateDir, 'last-run.json'), JSON.stringify(summary, null, 2), { mode: 0o600 });
   console.log(JSON.stringify(summary));
-  if (result.invalid) throw new Error('Some enabled birthdays are invalid; review those records');
+  if (result.invalid) throw new Error('Some enabled reminders are invalid; review those records');
 }
 module.exports = { dueReminders, message, deliveryKey, main };
 if (require.main === module) main().catch((error) => { console.error(JSON.stringify({ event: 'failure', error: error.message })); process.exitCode = 1; });

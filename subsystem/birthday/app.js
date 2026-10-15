@@ -3,7 +3,9 @@
   const dates = window.BirthdayDates;
   const DATABASE_URL = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app';
   const $ = (id) => document.getElementById(id);
-  let records = [], editingId = null, ready = false, busy = false;
+  let records = [], editingId = null, editingSource = 'birthdays', ready = false, busy = false;
+  const isCountdown = record => record?.kind === 'countdown';
+  const formCountdown = () => $('birthday-kind').value === 'countdown';
 
   function session() {
     if (!window.subsystemSession.isLoggedIn()) {
@@ -19,15 +21,16 @@
     $('birthday-reload').disabled = busy;
     $('birthday-calendar').disabled = !ready || busy || !records.some((record) => record.reminder);
     $('birthday-cancel').disabled = busy;
-    ['birthday-name', 'birthday-date', 'birthday-reminder', 'birthday-email-reminder', 'birthday-calendar-type', 'birthday-lunar-year', 'birthday-lunar-month', 'birthday-lunar-day'].forEach((id) => { $(id).disabled = busy; });
-    $('birthday-date').disabled = busy || $('birthday-calendar-type').value === 'lunar';
+    ['birthday-kind', 'birthday-name', 'birthday-date', 'birthday-reminder', 'birthday-email-reminder', 'birthday-calendar-type', 'birthday-lunar-year', 'birthday-lunar-month', 'birthday-lunar-day'].forEach((id) => { $(id).disabled = busy; });
+    $('birthday-kind').disabled = busy || editingId !== null;
+    $('birthday-date').disabled = busy || (!formCountdown() && $('birthday-calendar-type').value === 'lunar');
     document.querySelectorAll('#birthday-list button').forEach((button) => { button.disabled = !ready || busy; });
   }
-  async function request(path = '', method = 'GET', value) {
+  async function request(path = '', method = 'GET', value, source = 'birthdays') {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     try {
-      const response = await fetch(`${DATABASE_URL}/birthdays${path}.json`, {
+      const response = await fetch(`${DATABASE_URL}/${source}${path}.json`, {
         method, signal: controller.signal, headers: { 'Content-Type': 'application/json' },
         ...(value === undefined ? {} : { body: JSON.stringify(value) })
       });
@@ -36,6 +39,7 @@
     } finally { clearTimeout(timeout); }
   }
   function valid(record) {
+    if (isCountdown(record)) return window.CountdownDates.valid(record) && (record.emailReminder === undefined || typeof record.emailReminder === 'boolean');
     const base = record && typeof record.name === 'string' && record.name.trim().length > 0
       && record.name.length <= 80 && dates.parse(record.date) && record.date <= dates.today()
       && typeof record.reminder === 'boolean'
@@ -74,7 +78,17 @@
     conversion();
   }
   function conversion() {
-    const lunar = $('birthday-calendar-type').value === 'lunar';
+    const countdown = formCountdown();
+    const lunar = !countdown && $('birthday-calendar-type').value === 'lunar';
+    $('birthday-calendar-field').hidden = countdown;
+    $('birthday-calendar-reminder-field').hidden = countdown;
+    $('birthday-repeat-hint').hidden = countdown;
+    $('birthday-name-label').textContent = countdown ? '事项名称' : '姓名';
+    $('birthday-name').placeholder = countdown ? '例如：旅行、考试、截止日' : '输入亲友姓名';
+    $('birthday-date-label').textContent = countdown ? '目标日期（公历）' : '出生日期（公历）';
+    $('birthday-date').max = countdown ? '9999-12-31' : dates.today();
+    $('form-title').textContent = `${editingId ? '编辑' : '添加'}${countdown ? '日期倒数' : '生日'}`;
+    $('birthday-save').textContent = editingId ? '保存修改' : countdown ? '保存倒数' : '保存生日';
     $('birthday-solar-field').hidden = lunar;
     $('birthday-date').required = !lunar;
     $('birthday-date').disabled = busy || lunar;
@@ -82,11 +96,9 @@
     $('birthday-conversion').textContent = lunar ? `对应公历出生日期：${dates.lunarDate(lunarInput()) || '请选择有效日期'}` : '';
   }
   function reset() {
-    editingId = null;
+    editingId = null; editingSource = 'birthdays';
     $('birthday-form').reset();
-    updateMonths(); conversion();
-    $('form-title').textContent = '添加生日';
-    $('birthday-save').textContent = '保存生日';
+    updateMonths(); conversion(); controls();
     $('birthday-cancel').hidden = true;
   }
   function button(label, action) {
@@ -97,28 +109,30 @@
   }
   function render() {
     const current = dates.today();
-    $('birthday-date').max = current;
+    $('birthday-date').max = formCountdown() ? '9999-12-31' : current;
     const list = $('birthday-list');
     list.replaceChildren();
-    $('birthday-count').textContent = `（${records.length} 人）`;
+    $('birthday-count').textContent = `（${records.length} 项）`;
     $('birthday-empty').hidden = records.length > 0;
-    $('birthday-empty').textContent = '还没有生日记录，添加第一位亲友吧。';
-    records.map((record) => ({ ...record, next: dates.nextRecord(record, current) }))
-      .sort((a, b) => a.next.days - b.next.days || a.name.localeCompare(b.name, 'zh-CN'))
+    $('birthday-empty').textContent = '还没有记录，添加一个生日或重要日期吧。';
+    records.map((record) => ({ ...record, next: isCountdown(record) ? { date: record.date, days: window.CountdownDates.remaining(record.date, current) } : dates.nextRecord(record, current) }))
+      .sort((a, b) => Number(a.next.days < 0) - Number(b.next.days < 0) || (a.next.days < 0 ? b.next.days - a.next.days : a.next.days - b.next.days) || a.name.localeCompare(b.name, 'zh-CN'))
       .forEach((record) => {
         const row = document.createElement('article'); row.className = 'birthday-row';
         const info = document.createElement('div');
-        const name = document.createElement('strong'); name.textContent = record.name;
+        const name = document.createElement('strong'); name.textContent = `${isCountdown(record) ? '【倒数】' : '【生日】'}${record.name}`;
         const detail = document.createElement('p'); detail.className = 'birthday-detail';
-        const birth = record.calendar === 'lunar' ? `农历 ${record.lunar.year} 年${record.lunar.leap ? '闰' : ''}${monthNames[record.lunar.month - 1]} ${record.lunar.day} 日（公历 ${record.date}）` : `公历 ${record.date}`;
-        detail.textContent = `出生日期：${birth} · ${record.emailReminder !== false ? '邮件提醒已开启' : '邮件提醒已关闭'} · ${record.reminder ? '日历提醒已选（需下载导入）' : '日历提醒未开启'}`;
+        const birth = !isCountdown(record) && record.calendar === 'lunar' ? `农历 ${record.lunar.year} 年${record.lunar.leap ? '闰' : ''}${monthNames[record.lunar.month - 1]} ${record.lunar.day} 日（公历 ${record.date}）` : `公历 ${record.date}`;
+        const email = isCountdown(record) ? record.emailReminder === true : record.emailReminder !== false;
+        detail.textContent = isCountdown(record) ? `目标日期：${record.date} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'}` : `出生日期：${birth} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'} · ${record.reminder ? '日历提醒已选（需下载导入）' : '日历提醒未开启'}`;
         const countdown = document.createElement('span'); countdown.className = 'birthday-countdown';
-        countdown.textContent = record.next.days === 0 ? '今天生日，记得送上祝福！' : `${record.next.date} · 还有 ${record.next.days} 天`;
+        countdown.textContent = record.next.days < 0 ? `已过去 ${-record.next.days} 天` : record.next.days === 0 ? (isCountdown(record) ? '就是今天！' : '今天生日，记得送上祝福！') : `${record.next.date} · 还有 ${record.next.days} 天`;
         info.append(name, detail, countdown);
         const actions = document.createElement('div'); actions.className = 'birthday-actions';
         actions.append(button('编辑', () => {
           if (!session()) return;
-          editingId = record.id;
+          editingId = record.id; editingSource = record.source;
+          $('birthday-kind').value = isCountdown(record) ? 'countdown' : 'birthday';
           $('birthday-name').value = record.name;
           $('birthday-date').value = record.date;
           $('birthday-calendar-type').value = record.calendar || 'solar';
@@ -129,8 +143,8 @@
           }
           conversion();
           $('birthday-reminder').checked = record.reminder;
-          $('birthday-email-reminder').checked = record.emailReminder !== false;
-          $('form-title').textContent = '编辑生日';
+          $('birthday-email-reminder').checked = isCountdown(record) ? record.emailReminder === true : record.emailReminder !== false;
+          controls();
           $('birthday-save').textContent = '保存修改';
           $('birthday-cancel').hidden = false;
           $('birthday-name').focus();
@@ -141,12 +155,15 @@
   }
   async function load() {
     if (!session() || busy) return;
-    busy = true; controls(); status('正在读取云端生日记录…');
+    busy = true; controls(); status('正在读取云端记录…');
     try {
-      const data = await request();
-      if (data !== null && (typeof data !== 'object' || Array.isArray(data))) throw new Error('Invalid birthday data');
-      const entries = Object.entries(data || {});
-      records = entries.filter(([, record]) => valid(record)).map(([id, record]) => ({ ...record, id }));
+      const [data, legacy] = await Promise.all([request(), request('', 'GET', undefined, 'countdowns')]);
+      for (const value of [data, legacy]) {
+        if (value !== null && (typeof value !== 'object' || Array.isArray(value))) throw new Error('Invalid records');
+      }
+      const entries = [...Object.entries(data || {}).map(([id, record]) => ({ id, record, source: 'birthdays' })),
+        ...Object.entries(legacy || {}).map(([id, record]) => ({ id, record: { ...record, kind: 'countdown' }, source: 'countdowns' }))];
+      records = entries.filter(({ record }) => valid(record)).map(({ id, record, source }) => ({ ...record, id, source }));
       ready = true;
       const skipped = entries.length - records.length;
       status(skipped ? `已加载；${skipped} 条格式异常的记录未显示。` : '已与云端同步。');
@@ -154,44 +171,45 @@
     } catch (error) {
       ready = false;
       status('云端读取失败，请检查网络后点击刷新。');
-      $('birthday-empty').textContent = '生日记录暂时无法加载。';
+      $('birthday-empty').textContent = '记录暂时无法加载。';
       console.error(error);
     } finally { busy = false; controls(); }
   }
   async function save(event) {
     event.preventDefault();
     if (!session() || !ready || busy) return;
-    const calendar = $('birthday-calendar-type').value;
+    const countdown = formCountdown();
+    const calendar = countdown ? 'solar' : $('birthday-calendar-type').value;
     const lunar = calendar === 'lunar' ? lunarInput() : null;
-    const record = { name: $('birthday-name').value.trim(), calendar, date: lunar ? dates.lunarDate(lunar) : $('birthday-date').value, reminder: $('birthday-reminder').checked, emailReminder: $('birthday-email-reminder').checked, ...(lunar ? { lunar } : {}) };
-    if (!valid(record)) { status('请输入姓名和有效的出生日期，日期不能晚于今天。'); return; }
+    const record = { ...(countdown ? { kind: 'countdown' } : {}), name: $('birthday-name').value.trim(), calendar, date: lunar ? dates.lunarDate(lunar) : $('birthday-date').value, reminder: !countdown && $('birthday-reminder').checked, emailReminder: $('birthday-email-reminder').checked, ...(lunar ? { lunar } : {}) };
+    if (!valid(record)) { status('请输入姓名和有效的出生日期，生日不能晚于今天，倒数可选未来日期。'); return; }
     // Generate the ID before writing, so retries update the same entry after a lost response.
     if (!editingId) editingId = crypto.randomUUID();
     const id = editingId;
     busy = true; controls(); status('正在保存…');
     try {
-      await request(`/${encodeURIComponent(id)}`, 'PUT', record);
-      records = records.filter((item) => item.id !== id).concat({ ...record, id });
+      await request(`/${encodeURIComponent(id)}`, 'PUT', record, editingSource);
+      records = records.filter((item) => item.id !== id || item.source !== editingSource).concat({ ...record, id, source: editingSource });
       reset(); render();
-      status('生日已保存，邮件设置将在下一次每日检查时生效。日历设置修改后需重新下载并导入。');
+      status('记录已保存，邮件设置将在下一次每日检查时生效。日历设置修改后需重新下载并导入。');
     } catch (error) {
       status('保存未确认成功，输入已保留。请重试或刷新确认云端记录。'); console.error(error);
     } finally { busy = false; controls(); }
   }
   async function remove(record) {
-    if (!session() || !ready || busy || !window.confirm(`确定删除“${record.name}”的生日记录吗？已导入的日历事件需在日历中另行删除。`)) return;
+    if (!session() || !ready || busy || !window.confirm(`确定删除“${record.name}”的记录吗？已导入的日历事件需在日历中另行删除。`)) return;
     busy = true; controls();
     try {
-      await request(`/${encodeURIComponent(record.id)}`, 'DELETE');
-      records = records.filter((item) => item.id !== record.id);
-      if (editingId === record.id) reset();
-      render(); status('生日已删除，请同时删除日历中的对应事件。');
+      await request(`/${encodeURIComponent(record.id)}`, 'DELETE', undefined, record.source);
+      records = records.filter((item) => item.id !== record.id || item.source !== record.source);
+      if (editingId === record.id && editingSource === record.source) reset();
+      render(); status('记录已删除，若已导入日历，请同时删除对应事件。');
     } catch (error) { status('删除未确认成功，请刷新确认或重试。'); console.error(error); }
     finally { busy = false; controls(); }
   }
   function download() {
     if (!session() || !ready || busy) return;
-    const blob = new Blob([dates.calendar(records)], { type: 'text/calendar;charset=utf-8' });
+    const blob = new Blob([dates.calendar(records.filter(record => !isCountdown(record)))], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a'); link.href = url; link.download = '亲友生日提醒.ics';
     document.body.append(link); link.click(); link.remove();
@@ -202,7 +220,9 @@
   $('birthday-app').hidden = false;
   $('birthday-date').max = dates.today();
   for (let year = Number(dates.today().slice(0, 4)); year >= 1900; year--) $('birthday-lunar-year').add(new Option(`${year} 年`, String(year)));
+  if (new URLSearchParams(window.location.search).get('kind') === 'countdown') $('birthday-kind').value = 'countdown';
   updateMonths(); conversion();
+  $('birthday-kind').addEventListener('change', () => { conversion(); controls(); });
   $('birthday-calendar-type').addEventListener('change', conversion);
   $('birthday-lunar-year').addEventListener('change', updateMonths);
   $('birthday-lunar-month').addEventListener('change', updateDays);
