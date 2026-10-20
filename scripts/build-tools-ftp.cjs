@@ -24,7 +24,7 @@ async function main() {
   const site = { title: 'Tools', baseurl: '', url: '', github: { url: '' }, tools_standalone: true, data: { navigation: { main: [] } } };
   const layout = splitPage(await fs.readFile('_layouts/subsystem.html', 'utf8')).body;
   const masthead = await fs.readFile('_includes/masthead.html', 'utf8');
-  const sources = ['_pages/subsystem.html', 'subsystem/index.html', 'subsystem/login.html', ...['diary','weight','video','birthday','countdown'].map(name => `subsystem/${name}/index.html`)];
+  const sources = ['_pages/subsystem.html', 'subsystem/index.html', 'subsystem/login.html', ...['diary','journal','weight','video','birthday','countdown'].map(name => `subsystem/${name}/index.html`)];
   await fs.mkdir(output, { recursive: true });
   for (const directory of ['subsystem', 'assets', 'images']) {
     await fs.cp(directory, path.join(output, directory), {

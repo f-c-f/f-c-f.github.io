@@ -1,5 +1,6 @@
 # Ignore the contents of the _site directory and other cache directories
 _site/
+_tools_site*/
 .sass-cache/
 
 # Ignore the directory for local files during development
@@ -18,3 +19,6 @@ package-lock.json
 
 # Ignore folders related to IDEs
 .vscode/
+
+# Local deployment credentials; never publish with this public repository.
+/FTP_DEPLOYMENT.local.md

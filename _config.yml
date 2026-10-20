@@ -163,6 +163,7 @@ include:
   - files
   - clash.yaml
 exclude:
+  - FTP_DEPLOYMENT.local.md
   - "*.sublime-project"
   - "*.sublime-workspace"
   - .asset-cache
