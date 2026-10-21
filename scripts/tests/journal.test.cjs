@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 // Exercise page events with a small DOM and an isolated Firebase transport.
-function setup({ cloud = null, fail = false, storageFailure = false } = {}) {
+function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {} } = {}) {
   class Element {
     constructor() { this.value = ''; this.children = []; this.events = {}; this.dataset = {}; this.classList = { toggle() {} }; }
     addEventListener(event, action) { this.events[event] = action; }
@@ -15,7 +15,7 @@ function setup({ cloud = null, fail = false, storageFailure = false } = {}) {
     click() {}
     fire(event) { return this.events[event]?.({ target: this }); }
   }
-  const elements = new Map(), storage = new Map(), requests = [];
+  const elements = new Map(), storage = new Map(Object.entries(initialStorage)), requests = [];
   const el = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
   let remote = cloud;
   const context = {
@@ -32,7 +32,7 @@ function setup({ cloud = null, fail = false, storageFailure = false } = {}) {
       return { ok: true, headers: { get: () => '"test-version"' }, json: async () => value };
     }
   };
-  context.window = { subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
+  context.window = { JournalCarryover: require('../../subsystem/journal/carryover.js'), subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync(__dirname + '/../../subsystem/journal/app.js', 'utf8'), context);
   return { el, storage, requests, setRemote(value) { remote = value; }, getRemote: () => remote };
 }
@@ -108,4 +108,64 @@ test('storage failure blocks navigation away from an unsaved draft', async () =>
   assert.equal(app.el('journal-fallback').value, '重要进展');
   await app.el('journal-save').fire('click');
   assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
+});
+
+const carry = require('../../subsystem/journal/carryover.js');
+const record = (date, content) => ({ date, title: '', projects: [], content, updatedAt: '2026-01-01T00:00:00Z' });
+test('yesterday plans initialize today once and remain independent after saving', async () => {
+  const date = localDay(), yesterday = carry.previousDay(date);
+  const source = record(yesterday, '## 明日计划\n- [ ] 阅读论文\n- [x] 已完成\n- [ ] 跑实验');
+  const app = setup({ cloud: { [yesterday]: source } }); await settle();
+  assert.equal(app.el('journal-fallback').value, '## 今日待办\n- [ ] 阅读论文\n- [ ] 跑实验\n');
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
+  app.el('journal-today').fire('click');
+  assert.equal(app.el('journal-fallback').value.match(/阅读论文/g).length, 1);
+  app.el('journal-fallback').value = app.el('journal-fallback').value.replace('- [ ] 阅读论文', '- [x] 阅读论文');
+  app.el('journal-fallback').fire('input');
+  await app.el('journal-save').fire('click');
+  assert.equal(app.getRemote()[yesterday].content, source.content);
+  assert.equal(app.getRemote()[date].carryover.sourceDate, yesterday);
+  const reopened = setup({ cloud: app.getRemote() }); await settle();
+  assert.match(reopened.el('journal-fallback').value, /\[x\] 阅读论文/);
+  assert.equal(reopened.el('journal-fallback').value.match(/跑实验/g).length, 1);
+});
+test('existing cloud entries and local drafts are never replaced by automatic carryover', async () => {
+  const date = localDay(), yesterday = carry.previousDay(date), source = record(yesterday, '## 明日计划\n- [ ] 跑实验');
+  const app = setup({ cloud: { [yesterday]: source, [date]: record(date, '已经写好的内容') } }); await settle();
+  assert.equal(app.el('journal-fallback').value, '已经写好的内容');
+  const draftApp = setup({ cloud: { [yesterday]: source }, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '尚未保存的内容') }) } });
+  await settle(); assert.equal(draftApp.el('journal-fallback').value, '尚未保存的内容');
+});
+test('offline cached plans do not initialize today before the cloud has been checked', async () => {
+  const yesterday = carry.previousDay(localDay());
+  const app = setup({ fail: true, initialStorage: { 'work-journal-cache-v1': JSON.stringify({ [yesterday]: record(yesterday, '## 明日计划\n- [ ] 跑实验') }) } });
+  await settle(); assert.equal(app.el('journal-fallback').value, '');
+  assert.equal(app.el('journal-carry-panel').hidden, true);
+});
+test('missing yesterday offers a manual import from the most recent journal, only once', async () => {
+  const date = localDay(), prior = carry.previousDay(carry.previousDay(date));
+  const app = setup({ cloud: { [prior]: record(prior, '## 明日计划\n- [ ] 跑实验') } }); await settle();
+  assert.equal(app.el('journal-fallback').value, '');
+  assert.equal(app.el('journal-carry-panel').hidden, false);
+  app.el('journal-fallback').value = '## 今日完成\n已有内容'; app.el('journal-fallback').fire('input');
+  app.el('journal-carry').fire('click'); app.el('journal-carry').fire('click');
+  assert.match(app.el('journal-fallback').value, /今日待办/);
+  assert.match(app.el('journal-fallback').value, /已有内容/);
+  assert.equal(app.el('journal-fallback').value.match(/跑实验/g).length, 1);
+  assert.equal(app.el('journal-carry-panel').hidden, true);
+});
+test('an empty or completed tomorrow section does not create a new draft', async () => {
+  const yesterday = carry.previousDay(localDay());
+  const app = setup({ cloud: { [yesterday]: record(yesterday, '## 明日计划\n- [ ] 填写明日计划\n- [x] 已完成') } }); await settle();
+  assert.equal(app.el('journal-fallback').value, '');
+  assert.equal(app.storage.get('work-journal-drafts-v1'), undefined);
+});
+test('an untouched blank draft can initialize but clearing imported tasks does not re-import', async () => {
+  const date = localDay(), yesterday = carry.previousDay(date);
+  const cloud = { [yesterday]: record(yesterday, '## 明日计划\n- [ ] 跑实验') };
+  const app = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '') }) } });
+  await settle(); assert.match(app.el('journal-fallback').value, /跑实验/);
+  app.el('journal-fallback').value = ''; app.el('journal-fallback').fire('input');
+  const reopened = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': app.storage.get('work-journal-drafts-v1') } });
+  await settle(); assert.equal(reopened.el('journal-fallback').value, '');
 });

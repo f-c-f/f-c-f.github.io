@@ -10,7 +10,8 @@ styles:
   - /subsystem/journal/style.css?v=20261020-3
 scripts:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js
-  - /subsystem/journal/app.js?v=20261020-3
+  - /subsystem/journal/carryover.js?v=20261021-1
+  - /subsystem/journal/app.js?v=20261021-1
 ---
 
 <div id="journal-app" class="journal" hidden>
@@ -20,6 +21,10 @@ scripts:
       <label id="journal-content-label" for="journal-fallback">今天的工作进展</label>
       <div id="journal-editor" aria-labelledby="journal-content-label"></div>
       <textarea id="journal-fallback" rows="16" aria-label="Markdown 工作记录" hidden></textarea>
+      <div id="journal-carry-panel" hidden>
+        <p id="journal-carry-hint" class="journal-hint"></p>
+        <button id="journal-carry" type="button" class="journal-secondary">从最近一次日志带入</button>
+      </div>
       <details class="journal-options"><summary>标题与项目（选填）</summary>
       <label for="journal-title">今天的一句话</label><input id="journal-title" maxlength="120" placeholder="今天推进了什么？">
       <label for="journal-projects">项目标签</label><input id="journal-projects" maxlength="240" placeholder="例如：科研，论文，代码（用逗号分隔）">

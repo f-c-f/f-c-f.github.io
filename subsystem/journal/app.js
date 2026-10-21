@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
+  const carry = window.JournalCarryover;
   const ROOT = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app/workJournal';
   const CACHE = 'work-journal-cache-v1', DRAFTS = 'work-journal-drafts-v1';
   const TEMPLATE = '## 今日完成\n- \n\n## 遇到的问题\n- \n\n## 明日计划\n- [ ] 填写明日计划\n\n## 思考与收获\n- \n';
@@ -17,7 +18,7 @@
   }
   let records = read(CACHE), drafts = read(DRAFTS), selected = today(), month = parse(today());
   let editor = null, editorReady = false, changing = false, dirty = false, busy = false, loaded = false;
-  let baseline = null, lastActivity = 0;
+  let baseline = null, lastActivity = 0, carryover = null;
   const status = message => { $('journal-status').textContent = message; };
   function store(name, value) {
     try { localStorage.setItem(name, JSON.stringify(value)); return true; }
@@ -36,7 +37,8 @@
   const content = () => editorReady ? editor.getValue() : $('journal-fallback').value;
   function current() {
     return { date: selected, title: $('journal-title').value.trim(), content: content(),
-      projects: [...new Set($('journal-projects').value.split(/[,，、]/).map(item => item.trim()).filter(Boolean))], updatedAt: new Date().toISOString() };
+      projects: [...new Set($('journal-projects').value.split(/[,，、]/).map(item => item.trim()).filter(Boolean))], updatedAt: new Date().toISOString(),
+      ...(carryover ? { carryover } : {}) };
   }
   function remember() {
     if (!dirty) return true;
@@ -61,6 +63,7 @@
     selected = date; month = parse(date);
     baseline = records[date] || null;
     const entry = drafts[date] || baseline;
+    carryover = entry?.carryover || null;
     dirty = Boolean(drafts[date]);
     $('journal-date').value = date;
     $('journal-day').textContent = parse(date).toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
@@ -68,9 +71,31 @@
     $('journal-projects').value = entry?.projects.join('，') || '';
     putContent(entry?.content ?? '');
     status(dirty ? '已恢复本机草稿，保存后同步到云端。' : baseline ? '已载入当天日志，可在上方直接续写或修改。' : '新的一天，从一条进展开始。');
+    // Wait for the cloud read before creating today's draft on this device.
+    const untouched = !entry || (!entry.content.trim() && !entry.title.trim() && !entry.projects.length && !carryover);
+    if (carry && loaded && date === today() && untouched) {
+      const source = all()[carry.previousDay(date)];
+      if (source) importPlan(source);
+    }
     render();
   }
   function all() { return { ...records, ...drafts }; }
+  function latestPlan() {
+    if (!carry || !loaded || selected !== today() || carryover) return null;
+    const entries = all();
+    if (entries[carry.previousDay(selected)]) return null;
+    const date = Object.keys(entries).filter(date => date < selected).sort().pop();
+    return date && carry.tasks(entries[date].content).length ? entries[date] : null;
+  }
+  function importPlan(source) {
+    if (!carry || busy || carryover) return;
+    const items = carry.tasks(source.content);
+    if (!items.length) return;
+    carryover = { sourceDate: source.date, importedAt: new Date().toISOString() };
+    putContent(carry.insert(content(), items));
+    dirty = true;
+    if (remember()) status(`已从 ${source.date} 带入 ${items.length} 项未完成计划到“今日待办”，保存后同步到云端。`);
+  }
   function openDate(date) {
     select(date);
     $('journal-day').scrollIntoView?.({ behavior: 'smooth', block: 'start' });
@@ -85,6 +110,10 @@
     return Array.from({ length: 7 }, (_, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return key(date); });
   }
   function render() {
+    const source = latestPlan();
+    $('journal-carry-panel').hidden = !source;
+    $('journal-carry').disabled = busy || !source;
+    $('journal-carry-hint').textContent = source ? `昨天没有日志。最近一次日志为 ${source.date}，可手动带入其中的未完成计划。` : '';
     const entries = all(), project = $('project-filter').value;
     const projects = [...new Set(Object.values(entries).flatMap(entry => entry.projects))].sort();
     $('project-filter').replaceChildren(new Option('全部项目', ''), ...projects.map(value => new Option(value, value)));
@@ -194,6 +223,11 @@
     if (next.getFullYear() >= 1900 && next.getFullYear() <= 9999) { month = next; render(); }
   });
   $('journal-save').addEventListener('click', save);
+  $('journal-carry').addEventListener('click', () => {
+    if (!session() || busy) return;
+    const source = latestPlan();
+    if (source) { importPlan(source); render(); }
+  });
   $('journal-reload').addEventListener('click', load);
   $('journal-template').addEventListener('click', () => { putContent(content().trim() ? content() + '\n\n' + TEMPLATE : TEMPLATE); changed(); });
   $('project-filter').addEventListener('change', render); $('journal-search').addEventListener('input', render);
