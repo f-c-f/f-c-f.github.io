@@ -10,14 +10,14 @@ styles:
   - /subsystem/journal/style.css?v=20261020-3
 scripts:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js
-  - /subsystem/journal/carryover.js?v=20261021-2
-  - /subsystem/journal/app.js?v=20261021-2
+  - /subsystem/journal/carryover.js?v=20261021-3
+  - /subsystem/journal/app.js?v=20261021-3
 ---
 
 <div id="journal-app" class="journal" hidden>
   <div class="journal-main">
     <section class="journal-card journal-writing">
-      <div class="journal-heading"><div><p class="journal-kicker">DAILY JOURNAL</p><h2 id="journal-day"></h2></div><span class="journal-hint">每天一页，随时续写</span></div>
+      <div class="journal-heading"><div><p class="journal-kicker">DAILY JOURNAL</p><h2 id="journal-day"></h2></div><span id="journal-task-progress" class="journal-hint" role="status" aria-live="polite">今日任务 · 已完成 0 / 0</span></div>
       <label id="journal-content-label" for="journal-fallback">今天的工作进展</label>
       <div id="journal-editor" aria-labelledby="journal-content-label"></div>
       <textarea id="journal-fallback" rows="16" aria-label="Markdown 工作记录" hidden></textarea>
@@ -54,6 +54,8 @@ scripts:
     <section class="journal-card">
       <div class="journal-heading"><h2>每周回顾</h2><button id="journal-export-week" type="button" class="journal-secondary">导出本周</button></div>
       <p id="journal-week-label" class="journal-hint"></p>
+      <h3 id="journal-week-completed-title">本周已完成任务</h3>
+      <ul id="journal-week-completed"></ul>
       <div id="journal-week"></div>
     </section>
     <div class="journal-actions journal-footer"><button id="journal-reload" type="button" class="journal-secondary">刷新云端</button><button id="journal-export-all" type="button" class="journal-secondary">备份全部 JSON</button><span id="journal-sync" role="status"></span></div>

@@ -4,7 +4,7 @@
   const carry = window.JournalCarryover;
   const ROOT = 'https://moneybase-bf6ec-default-rtdb.asia-southeast1.firebasedatabase.app/workJournal';
   const CACHE = 'work-journal-cache-v1', DRAFTS = 'work-journal-drafts-v1';
-  const TEMPLATE = '## 今日完成\n- \n\n## 遇到的问题\n- \n\n## 明日计划\n- [ ] 填写明日计划\n\n## 思考与收获\n- \n';
+  const TEMPLATE = carry.template('');
   const key = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   const parse = value => new Date(`${value}T12:00:00`);
   const today = () => key(new Date());
@@ -95,7 +95,7 @@
     carryover = { sourceDate: source.date, importedAt: new Date().toISOString() };
     putContent(carry.insert(content(), items));
     dirty = true;
-    if (remember()) status(`已从 ${source.date} 带入 ${items.length} 项未完成计划到“今日待办”，保存后同步到云端。`);
+    if (remember()) status(`已从 ${source.date} 带入未完成计划到“今日任务”，保存后同步到云端。`);
   }
   function openDate(date) {
     select(date);
@@ -116,7 +116,9 @@
     $('journal-carry').disabled = busy || !source;
     const fromYesterday = source && source.date === carry.previousDay(selected);
     $('journal-carry').textContent = fromYesterday ? '从昨天日志带入' : '从最近一次日志带入';
-    $('journal-carry-hint').textContent = source ? (fromYesterday ? `昨天（${source.date}）有未完成计划，可带入“今日待办”，保留当前正文。` : `昨天没有日志。最近一次日志为 ${source.date}，可手动带入其中的未完成计划。`) : '';
+    $('journal-carry-hint').textContent = source ? (fromYesterday ? `昨天（${source.date}）有未完成计划，可带入“今日任务”，保留当前正文。` : `昨天没有日志。最近一次日志为 ${source.date}，可手动带入其中的未完成计划。`) : '';
+    const progress = carry.progress(content());
+    $('journal-task-progress').textContent = `今日任务 · 已完成 ${progress.done} / ${progress.total}`;
     const entries = all(), project = $('project-filter').value;
     const projects = [...new Set(Object.values(entries).flatMap(entry => entry.projects))].sort();
     $('project-filter').replaceChildren(new Option('全部项目', ''), ...projects.map(value => new Option(value, value)));
@@ -147,6 +149,15 @@
     }
     const dates = weekDates(), weekly = dates.map(date => entries[date]).filter(Boolean);
     $('journal-week-label').textContent = `${dates[0]} — ${dates[6]} · 已记录 ${weekly.length} 天（含本机草稿）`;
+    const completed = completedTasks(entries, dates);
+    $('journal-week-completed-title').textContent = `本周已完成任务（${completed.length}）`;
+    $('journal-week-completed').replaceChildren();
+    if (!completed.length) $('journal-week-completed').textContent = '勾选完成的今日任务会自动汇总在这里。';
+    for (const item of completed) {
+      const line = document.createElement('li');
+      line.textContent = `${item.date} · ${item.text}`;
+      $('journal-week-completed').append(line);
+    }
     $('journal-week').replaceChildren();
     if (!weekly.length) $('journal-week').textContent = '这一周还没有记录。日积月累，进展会在这里连成线。';
     for (const entry of weekly) {
@@ -154,6 +165,9 @@
       section.className = 'journal-week-entry'; heading.textContent = `${entry.date} · ${entry.title || '工作日志'}${drafts[entry.date] ? '（草稿）' : ''}`;
       body.textContent = entry.content; section.append(heading, body); $('journal-week').append(section);
     }
+  }
+  function completedTasks(entries, dates) {
+    return dates.flatMap(date => entries[date] ? carry.progress(entries[date].content).completed.map(text => ({ date, text })) : []);
   }
   function controls() {
     ['journal-date', 'journal-title', 'journal-projects', 'journal-template', 'journal-reload', 'journal-today', 'month-prev', 'month-next'].forEach(id => { $(id).disabled = busy; });
@@ -232,12 +246,14 @@
     if (source) { importPlan(source); render(); }
   });
   $('journal-reload').addEventListener('click', load);
-  $('journal-template').addEventListener('click', () => { putContent(content().trim() ? content() + '\n\n' + TEMPLATE : TEMPLATE); changed(); });
+  $('journal-template').addEventListener('click', () => { putContent(carry.template(content())); changed(); });
   $('project-filter').addEventListener('change', render); $('journal-search').addEventListener('input', render);
   $('journal-export-day').addEventListener('click', () => download(`${selected}-工作日志.md`, markdown(current()), 'text/markdown;charset=utf-8'));
   $('journal-export-week').addEventListener('click', () => {
     remember(); const dates = weekDates(), entries = all();
-    download(`${dates[0]}-周回顾.md`, dates.filter(date => entries[date]).map(date => markdown(entries[date])).join('\n---\n\n') || '本周暂无记录。', 'text/markdown;charset=utf-8');
+    const completed = completedTasks(entries, dates);
+    const summary = `# 每周回顾 ${dates[0]} — ${dates[6]}\n\n## 已完成任务\n${completed.map(item => `- ${item.date} · ${item.text}`).join('\n') || '本周暂无勾选完成的任务。'}\n\n---\n\n`;
+    download(`${dates[0]}-周回顾.md`, summary + (dates.filter(date => entries[date]).map(date => markdown(entries[date])).join('\n---\n\n') || '本周暂无记录。'), 'text/markdown;charset=utf-8');
   });
   $('journal-export-all').addEventListener('click', () => {
     remember(); download(`工作日志备份-${today()}.json`, JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records, drafts }, null, 2), 'application/json');

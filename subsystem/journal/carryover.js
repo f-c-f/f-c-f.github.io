@@ -41,7 +41,7 @@
         if (!fence) fence = marker[1];
         else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
       } else if (!fence) {
-        if (at < 0 && /^#{1,6}[ \t]+今日待办[ \t]*#*[ \t]*\r?$/.test(line)) at = offset + line.length;
+        if (at < 0 && /^#{1,6}[ \t]+(?:今日任务|今日待办)[ \t]*#*[ \t]*\r?$/.test(line)) at = offset + line.length;
         const task = line.match(/^\s*[-*+]\s+\[[ xX]\]\s+(.+?)\s*$/);
         if (task) existing.add(task[1].trim().replace(/\s+/g, ' '));
       }
@@ -53,9 +53,55 @@
     if (at >= 0) {
       return `${markdown.slice(0, at)}\n${lines}${markdown.slice(at)}`;
     }
-    return `## 今日待办\n${lines}\n${markdown.trim() ? '\n' + markdown : ''}`;
+    return `## 今日任务\n${lines}\n${markdown.trim() ? '\n' + markdown : ''}`;
   }
-  const api = { previousDay, tasks, insert };
+  function progress(markdown) {
+    const items = new Map();
+    let section = 0, fence = null;
+    for (const line of markdown.replace(/\r\n?/g, '\n').split('\n')) {
+      const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
+        continue;
+      }
+      if (fence) continue;
+      const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+      if (heading) {
+        if (['今日任务', '今日待办'].includes(heading[2].replace(/[*_`]/g, '').trim())) section = heading[1].length;
+        else if (section && heading[1].length <= section) section = 0;
+        continue;
+      }
+      const item = section && line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/);
+      if (!item) continue;
+      const checkbox = item[1].match(/^\[([ xX])\](?:\s+|$)(.*)$/);
+      const text = (checkbox ? checkbox[2] : item[1]).trim(), normalized = text.replace(/\s+/g, ' ');
+      if (!text || ['填写今日任务', '填写今日待办'].includes(text)) continue;
+      items.set(normalized, { text, done: Boolean(checkbox && checkbox[1] !== ' ') || Boolean(items.get(normalized)?.done) });
+    }
+    const completed = [...items.values()].filter(item => item.done).map(item => item.text);
+    return { total: items.size, done: completed.length, completed };
+  }
+  function template(markdown) {
+    let fence = null;
+    const headings = new Set();
+    for (const line of markdown.split('\n')) {
+      const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
+      } else if (!fence) {
+        const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+        if (heading) headings.add(heading[1].replace(/[*_`]/g, '').trim());
+      }
+    }
+    const missing = [];
+    if (!headings.has('今日任务') && !headings.has('今日待办')) missing.push('## 今日任务\n- [ ] 填写今日任务');
+    if (!headings.has('进展与记录')) missing.push('## 进展与记录\n');
+    if (!headings.has('明日计划')) missing.push('## 明日计划\n- [ ] 填写明日计划');
+    return missing.length ? [markdown.trimEnd(), ...missing].filter(Boolean).join('\n\n') + '\n' : markdown;
+  }
+  const api = { previousDay, tasks, insert, progress, template };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.JournalCarryover = api;
 })(typeof window === 'undefined' ? globalThis : window);

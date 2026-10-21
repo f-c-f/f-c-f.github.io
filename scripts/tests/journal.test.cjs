@@ -116,7 +116,7 @@ test('yesterday plans initialize today once and remain independent after saving'
   const date = localDay(), yesterday = carry.previousDay(date);
   const source = record(yesterday, '## 明日计划\n- [ ] 阅读论文\n- [x] 已完成\n- [ ] 跑实验');
   const app = setup({ cloud: { [yesterday]: source } }); await settle();
-  assert.equal(app.el('journal-fallback').value, '## 今日待办\n- [ ] 阅读论文\n- [ ] 跑实验\n');
+  assert.equal(app.el('journal-fallback').value, '## 今日任务\n- [ ] 阅读论文\n- [ ] 跑实验\n');
   assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
   app.el('journal-today').fire('click');
   assert.equal(app.el('journal-fallback').value.match(/阅读论文/g).length, 1);
@@ -149,7 +149,7 @@ test('missing yesterday offers a manual import from the most recent journal, onl
   assert.equal(app.el('journal-carry-panel').hidden, false);
   app.el('journal-fallback').value = '## 今日完成\n已有内容'; app.el('journal-fallback').fire('input');
   app.el('journal-carry').fire('click'); app.el('journal-carry').fire('click');
-  assert.match(app.el('journal-fallback').value, /今日待办/);
+  assert.match(app.el('journal-fallback').value, /今日任务/);
   assert.match(app.el('journal-fallback').value, /已有内容/);
   assert.equal(app.el('journal-fallback').value.match(/跑实验/g).length, 1);
   assert.equal(app.el('journal-carry-panel').hidden, true);
@@ -173,7 +173,7 @@ test('plain yesterday plans initialize today and can also be imported into an ex
   const date = localDay(), yesterday = carry.previousDay(date);
   const cloud = { [yesterday]: record(yesterday, '## 明日计划\n- 阅读论文\n- 跑实验\n- [x] 已完成') };
   const app = setup({ cloud }); await settle();
-  assert.equal(app.el('journal-fallback').value, '## 今日待办\n- [ ] 阅读论文\n- [ ] 跑实验\n');
+  assert.equal(app.el('journal-fallback').value, '## 今日任务\n- [ ] 阅读论文\n- [ ] 跑实验\n');
   const draftApp = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '已有正文') }) } });
   await settle(); assert.equal(draftApp.el('journal-fallback').value, '已有正文');
   assert.equal(draftApp.el('journal-carry-panel').hidden, false);
@@ -181,4 +181,15 @@ test('plain yesterday plans initialize today and can also be imported into an ex
   draftApp.el('journal-carry').fire('click'); draftApp.el('journal-carry').fire('click');
   assert.match(draftApp.el('journal-fallback').value, /已有正文/);
   assert.equal(draftApp.el('journal-fallback').value.match(/阅读论文/g).length, 1);
+});
+test('daily progress and weekly completion summary reflect checked today tasks only', async () => {
+  const date = localDay();
+  const app = setup({ cloud: { [date]: record(date, '## 今日任务\n- [x] 阅读论文\n- [ ] 跑实验\n## 明日计划\n- [x] 明天事项') } });
+  await settle();
+  assert.equal(app.el('journal-task-progress').textContent, '今日任务 · 已完成 1 / 2');
+  assert.equal(app.el('journal-week-completed-title').textContent, '本周已完成任务（1）');
+  assert.equal(app.el('journal-week-completed').children[0].textContent, `${date} · 阅读论文`);
+  app.el('journal-fallback').value = app.el('journal-fallback').value.replace('- [ ] 跑实验', '- [x] 跑实验'); app.el('journal-fallback').fire('input');
+  assert.equal(app.el('journal-task-progress').textContent, '今日任务 · 已完成 2 / 2');
+  assert.equal(app.el('journal-week-completed').children.length, 2);
 });
