@@ -83,7 +83,8 @@
   function latestPlan() {
     if (!carry || !loaded || selected !== today() || carryover) return null;
     const entries = all();
-    if (entries[carry.previousDay(selected)]) return null;
+    const yesterday = entries[carry.previousDay(selected)];
+    if (yesterday) return carry.tasks(yesterday.content).length ? yesterday : null;
     const date = Object.keys(entries).filter(date => date < selected).sort().pop();
     return date && carry.tasks(entries[date].content).length ? entries[date] : null;
   }
@@ -113,7 +114,9 @@
     const source = latestPlan();
     $('journal-carry-panel').hidden = !source;
     $('journal-carry').disabled = busy || !source;
-    $('journal-carry-hint').textContent = source ? `昨天没有日志。最近一次日志为 ${source.date}，可手动带入其中的未完成计划。` : '';
+    const fromYesterday = source && source.date === carry.previousDay(selected);
+    $('journal-carry').textContent = fromYesterday ? '从昨天日志带入' : '从最近一次日志带入';
+    $('journal-carry-hint').textContent = source ? (fromYesterday ? `昨天（${source.date}）有未完成计划，可带入“今日待办”，保留当前正文。` : `昨天没有日志。最近一次日志为 ${source.date}，可手动带入其中的未完成计划。`) : '';
     const entries = all(), project = $('project-filter').value;
     const projects = [...new Set(Object.values(entries).flatMap(entry => entry.projects))].sort();
     $('project-filter').replaceChildren(new Option('全部项目', ''), ...projects.map(value => new Option(value, value)));

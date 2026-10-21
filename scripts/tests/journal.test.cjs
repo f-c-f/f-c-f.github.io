@@ -169,3 +169,16 @@ test('an untouched blank draft can initialize but clearing imported tasks does n
   const reopened = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': app.storage.get('work-journal-drafts-v1') } });
   await settle(); assert.equal(reopened.el('journal-fallback').value, '');
 });
+test('plain yesterday plans initialize today and can also be imported into an existing draft', async () => {
+  const date = localDay(), yesterday = carry.previousDay(date);
+  const cloud = { [yesterday]: record(yesterday, '## 明日计划\n- 阅读论文\n- 跑实验\n- [x] 已完成') };
+  const app = setup({ cloud }); await settle();
+  assert.equal(app.el('journal-fallback').value, '## 今日待办\n- [ ] 阅读论文\n- [ ] 跑实验\n');
+  const draftApp = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '已有正文') }) } });
+  await settle(); assert.equal(draftApp.el('journal-fallback').value, '已有正文');
+  assert.equal(draftApp.el('journal-carry-panel').hidden, false);
+  assert.equal(draftApp.el('journal-carry').textContent, '从昨天日志带入');
+  draftApp.el('journal-carry').fire('click'); draftApp.el('journal-carry').fire('click');
+  assert.match(draftApp.el('journal-fallback').value, /已有正文/);
+  assert.equal(draftApp.el('journal-fallback').value.match(/阅读论文/g).length, 1);
+});

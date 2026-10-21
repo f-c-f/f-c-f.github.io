@@ -22,9 +22,11 @@
         else if (section && heading[1].length <= section) section = 0;
         continue;
       }
-      const task = section && line.match(/^\s*[-*+]\s+\[ \]\s+(.+?)\s*$/);
-      if (!task) continue;
-      const text = task[1].trim(), normalized = text.replace(/\s+/g, ' ');
+      const item = section && line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/);
+      if (!item) continue;
+      const checkbox = item[1].match(/^\[([ xX])\](?:\s+|$)(.*)$/);
+      if (checkbox && checkbox[1] !== ' ') continue;
+      const text = (checkbox ? checkbox[2] : item[1]).trim(), normalized = text.replace(/\s+/g, ' ');
       if (!text || text === '填写明日计划' || seen.has(normalized)) continue;
       seen.add(normalized); result.push(text);
     }

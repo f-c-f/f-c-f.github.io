@@ -13,6 +13,9 @@ test('only actual unfinished tomorrow tasks are extracted', () => {
 test('code examples cannot introduce a tomorrow section', () => {
   assert.deepEqual(carry.tasks('~~~md\n## 明日计划\n- [ ] 示例\n~~~\n## 今日完成\n- [ ] 完成'), []);
 });
+test('ordinary bullet and numbered plans become pending tasks while checked items stay excluded', () => {
+  assert.deepEqual(carry.tasks('## 明日计划\n- 阅读论文\n* 整理结果\n1. 跑实验\n2) 写总结\n- [x] 已完成\n- [ ] 检查数据\n- [ ]\n## 今日完成\n- 其他事项'), ['阅读论文', '整理结果', '跑实验', '写总结', '检查数据']);
+});
 test('today section insertion preserves user notes and completed task states', () => {
   const before = '## 今日待办\n- [x] 阅读论文\n\n## 今日完成\n保留正文';
   assert.equal(carry.insert(before, ['阅读论文', '跑实验']), '## 今日待办\n- [ ] 跑实验\n- [x] 阅读论文\n\n## 今日完成\n保留正文');
