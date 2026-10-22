@@ -54,12 +54,12 @@
 
 // Hide private Tools navigation until the current password session is valid.
 (function () {
-  const SESSION_TTL_MS = 180000;
+  const SESSION_TTL_MS = 30 * 60 * 1000;
 
   function isLoggedIn() {
     const loginTime = Number(localStorage.getItem('loginTime'));
     return localStorage.getItem('isLoggedIn') === 'true'
-      && Number.isFinite(loginTime)
+      && Number.isFinite(loginTime) && loginTime > 0 && loginTime <= Date.now()
       && Date.now() - loginTime <= SESSION_TTL_MS;
   }
 
@@ -75,6 +75,18 @@
       item.hidden = !visible;
     });
   }
+
+  // Only user activity extends the session; background checks do not.
+  let lastActivity = 0;
+  function renewOnActivity() {
+    const now = Date.now();
+    if (now - lastActivity < 30000 || !isLoggedIn()) return;
+    lastActivity = now;
+    localStorage.setItem('loginTime', String(now));
+  }
+  ['pointerdown', 'keydown', 'input'].forEach(type => {
+    document.addEventListener(type, renewOnActivity, { passive: true });
+  });
 
   window.subsystemSession = {
     isLoggedIn,

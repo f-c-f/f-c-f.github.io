@@ -271,3 +271,24 @@ test('daily progress and weekly completion summary reflect checked today tasks o
   assert.equal(app.el('journal-task-progress').textContent, '今日任务 · 已完成 2 / 2');
   assert.equal(app.el('journal-week-completed').children.length, 2);
 });
+
+test('completed task summaries render inline Markdown and old escaped strike-through without changing records', async () => {
+  const date = localDay(), calls = [];
+  const content = '## 今日任务\n- [x] \\~\\~办牌照\\~\\~\n- [x] **论文报销**';
+  const app = setup({
+    cloud: { [date]: record(date, content) },
+    markdownRenderer: { parseInline(text) { calls.push(text); return '<del>办牌照</del>'; } },
+    htmlSanitizer: { sanitize(html, options) {
+      assert.deepEqual(Array.from(options.ALLOWED_TAGS), ['del', 's', 'strong', 'em', 'code', 'a', 'br']);
+      return html;
+    } }
+  });
+  await settle();
+  assert.ok(calls.includes('~~办牌照~~'));
+  assert.ok(calls.includes('**论文报销**'));
+  const line = app.el('journal-week-completed').children[0];
+  assert.equal(line.children[0].textContent, `${date} · `);
+  assert.equal(line.children[1].innerHTML, '<del>办牌照</del>');
+  assert.equal(app.getRemote()[date].content, content);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
+});

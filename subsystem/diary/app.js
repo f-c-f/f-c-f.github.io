@@ -23,6 +23,7 @@ window.onload = async function() {
 
 // 检查登录状态和会话超时
 function checkLoginStatus() {
+    if (window.subsystemSession) return window.subsystemSession.isLoggedIn();
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const loginTime = localStorage.getItem('loginTime');
     
@@ -30,19 +31,17 @@ function checkLoginStatus() {
         return false;
     }
     
-    // 检查是否超过3分钟（180000毫秒）
+    // 检查是否超过30分钟（1800000毫秒）
     const currentTime = Date.now();
     const loginTimestamp = parseInt(loginTime);
     
-    if (currentTime - loginTimestamp > 180000) {
+    if (!Number.isFinite(loginTimestamp) || loginTimestamp > currentTime || currentTime - loginTimestamp > 1800000) {
         // 会话超时，清除登录状态
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('loginTime');
         return false;
     }
     
-    // 更新登录时间，重置超时计时器
-    localStorage.setItem('loginTime', currentTime.toString());
     return true;
 }
 

@@ -156,6 +156,20 @@
     for (const item of completed) {
       const line = document.createElement('li');
       line.textContent = `${item.date} · ${item.text}`;
+      if (window.marked?.parseInline && window.DOMPurify?.sanitize) {
+        // Older editor versions escaped a pair of strike-through delimiters.
+        // Normalize only that pair for display; keep the saved Markdown intact.
+        const markdown = completedMarkdown(item.text);
+        const task = document.createElement('span');
+        task.innerHTML = window.DOMPurify.sanitize(window.marked.parseInline(markdown, { gfm: true }), {
+          ALLOWED_TAGS: ['del', 's', 'strong', 'em', 'code', 'a', 'br'],
+          ALLOWED_ATTR: ['href', 'title']
+        });
+        const date = document.createElement('span');
+        date.textContent = `${item.date} · `;
+        line.textContent = '';
+        line.append(date, task);
+      }
       $('journal-week-completed').append(line);
     }
     $('journal-week').replaceChildren();
@@ -191,6 +205,7 @@
     });
     details.append(summary, body, edit); return details;
   }
+  const completedMarkdown = text => text.replace(/\\~\\~(.+?)\\~\\~/g, '~~$1~~');
   function completedTasks(entries, dates) {
     return dates.flatMap(date => entries[date] ? carry.progress(entries[date].content).completed.map(text => ({ date, text })) : []);
   }
@@ -344,7 +359,7 @@
   $('journal-export-week').addEventListener('click', () => {
     remember(); const dates = weekDates(), entries = all();
     const completed = completedTasks(entries, dates);
-    const summary = `# 每周回顾 ${dates[0]} — ${dates[6]}\n\n## 已完成任务\n${completed.map(item => `- ${item.date} · ${item.text}`).join('\n') || '本周暂无勾选完成的任务。'}\n\n---\n\n`;
+    const summary = `# 每周回顾 ${dates[0]} — ${dates[6]}\n\n## 已完成任务\n${completed.map(item => `- ${item.date} · ${completedMarkdown(item.text)}`).join('\n') || '本周暂无勾选完成的任务。'}\n\n---\n\n`;
     download(`${dates[0]}-周回顾.md`, summary + (dates.filter(date => entries[date]).map(date => markdown(entries[date])).join('\n---\n\n') || '本周暂无记录。'), 'text/markdown;charset=utf-8');
   });
   $('journal-export-all').addEventListener('click', () => {

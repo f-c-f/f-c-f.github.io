@@ -237,9 +237,10 @@ redirect_from:
     if (event.key === 'Enter') verifyPassword();
   });
   if (logoutButton) logoutButton.addEventListener('click', logout);
-  localStorage.removeItem('isLoggedIn');
-  localStorage.removeItem('loginTime');
+  const hasSession = Boolean(window.subsystemSession?.isLoggedIn());
   if (window.subsystemSession) window.subsystemSession.updatePrivateNavigation();
-  setDashboardVisible(false);
+  setDashboardVisible(hasSession);
+  const next = getNextUrl();
+  if (hasSession && next) window.location.href = `/subsystem/${next}`;
 })();
 </script>
