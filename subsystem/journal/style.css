@@ -33,6 +33,9 @@
 .journal .vditor-reset { font-size: 15px; }
 .journal .vditor-reset input[type="checkbox"] { width: 1em; height: 1em; padding: 0; margin: 0 .45em 0 0; vertical-align: middle; box-shadow: none; accent-color: var(--journal-accent); }
 .journal-week-entry { padding: 16px 0; border-bottom: 1px solid var(--global-border-color, #dce5e3); }
+.journal-week-entry summary { cursor: pointer; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+.journal-week-entry[open] > summary { margin-bottom: 12px; }
+.journal-week-entry button { margin-top: 12px; }
 .journal-week-entry h3 { margin: 0 0 8px; font-size: .85rem; }
 .journal-week-entry pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: inherit; font: inherit; font-size: .8rem; line-height: 1.8; max-height: 260px; overflow: auto; }
 .journal-footer { margin: 0 0 24px; }

@@ -19,6 +19,8 @@
   let records = read(CACHE), drafts = read(DRAFTS), selected = today(), month = parse(today());
   let editor = null, editorReady = false, changing = false, dirty = false, busy = false, loaded = false;
   let baseline = null, lastActivity = 0, carryover = null;
+  let saving = false, autoPaused = false;
+  const expandedHistory = new Set(), expandedWeek = new Set();
   const status = message => { $('journal-status').textContent = message; };
   function store(name, value) {
     try { localStorage.setItem(name, JSON.stringify(value)); return true; }
@@ -143,10 +145,7 @@
     $('journal-history').replaceChildren();
     if (!list.length) $('journal-history').textContent = '暂无记录，写下今天的第一条进展吧。';
     for (const entry of list) {
-      const button = document.createElement('button'), title = document.createElement('strong'), detail = document.createElement('small');
-      button.type = 'button'; button.disabled = busy; button.classList.toggle('is-selected', entry.date === selected);
-      title.textContent = entry.title || entry.content.replace(/[#*`>\[\]]/g, '').trim().split('\n').find(line => line.trim())?.slice(0, 55) || '工作日志'; detail.textContent = `${entry.date} · ${entry.projects.join(' / ') || '未分类'}${drafts[entry.date] ? ' · 草稿' : ''}`;
-      button.append(title, detail); button.addEventListener('click', () => openDate(entry.date)); $('journal-history').append(button);
+      $('journal-history').append(entryDetails(entry, expandedHistory));
     }
     const dates = weekDates(), weekly = dates.map(date => entries[date]).filter(Boolean);
     $('journal-week-label').textContent = `${dates[0]} — ${dates[6]} · 已记录 ${weekly.length} 天（含本机草稿）`;
@@ -162,17 +161,28 @@
     $('journal-week').replaceChildren();
     if (!weekly.length) $('journal-week').textContent = '这一周还没有记录。日积月累，进展会在这里连成线。';
     for (const entry of weekly) {
-      const section = document.createElement('article'), heading = document.createElement('h3'), body = document.createElement('pre');
-      section.className = 'journal-week-entry'; heading.textContent = `${entry.date} · ${entry.title || '工作日志'}${drafts[entry.date] ? '（草稿）' : ''}`;
-      body.textContent = entry.content; section.append(heading, body); $('journal-week').append(section);
+      $('journal-week').append(entryDetails(entry, expandedWeek));
     }
+  }
+  function entryDetails(entry, expanded) {
+    const details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('pre'), edit = document.createElement('button');
+    details.className = 'journal-week-entry'; details.open = expanded.has(entry.date);
+    summary.textContent = `${entry.date} · ${entry.projects.join(' / ') || entry.title || '未分类'}${drafts[entry.date] ? ' · 草稿' : ''}`;
+    body.textContent = entry.content; edit.textContent = '编辑这天的记录'; edit.type = 'button'; edit.disabled = busy; edit.className = 'journal-secondary';
+    edit.addEventListener('click', () => openDate(entry.date));
+    details.addEventListener('toggle', () => {
+      if (!details.isConnected) return;
+      if (details.open) expanded.add(entry.date); else expanded.delete(entry.date);
+    });
+    details.append(summary, body, edit); return details;
   }
   function completedTasks(entries, dates) {
     return dates.flatMap(date => entries[date] ? carry.progress(entries[date].content).completed.map(text => ({ date, text })) : []);
   }
   function controls() {
     ['journal-date', 'journal-title', 'journal-projects', 'journal-template', 'journal-reload', 'journal-today', 'month-prev', 'month-next'].forEach(id => { $(id).disabled = busy; });
-    $('journal-save').disabled = busy || !loaded;
+    $('journal-save').disabled = busy || saving || !loaded;
+    $('journal-reload').disabled = busy || saving;
     if (editorReady) { if (busy) editor.disabled(); else editor.enable(); }
     $('journal-fallback').disabled = busy;
   }
@@ -180,12 +190,12 @@
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 12000);
     try {
       const response = await fetch(`${ROOT}${date ? '/' + date : ''}.json`, { ...options, signal: controller.signal });
-      if (!response.ok) throw new Error(response.status === 412 ? '日志已被其他设备更新，请先导出本机草稿，再刷新查看云端记录。' : `云端请求失败（${response.status}）`);
+      if (!response.ok) throw Object.assign(new Error(response.status === 412 ? '日志已被其他设备更新，请先导出本机草稿，再刷新查看云端记录。' : `云端请求失败（${response.status}）`), { conflict: response.status === 412 });
       return { value: await response.json(), etag: response.headers.get('ETag') };
     } finally { clearTimeout(timer); }
   }
   async function load() {
-    if (!session() || busy) return;
+    if (!session() || busy || saving) return;
     remember(); busy = true; controls();
     $('journal-sync').textContent = '正在读取云端…';
     try {
@@ -193,33 +203,47 @@
       if (value !== null && (typeof value !== 'object' || Array.isArray(value))) throw new Error('云端日志格式异常，请检查数据');
       const normalized = Object.fromEntries(Object.entries(value || {}).map(([date, entry]) => [date, entry && { ...entry, projects: entry.projects ?? [] }]));
       if (Object.entries(normalized).some(([date, entry]) => !valid(entry) || entry.date !== date)) throw new Error('云端日志格式异常，请检查数据');
-      records = normalized; loaded = true; store(CACHE, records);
+      records = normalized; loaded = true; autoPaused = false; store(CACHE, records);
       $('journal-sync').textContent = '云端记录已更新';
     } catch (error) {
       $('journal-sync').textContent = `${error.message}；已保留本机记录，可稍后刷新重试。`;
     } finally { busy = false; controls(); select(selected); }
   }
-  async function save() {
-    if (!session() || busy || !loaded) return;
-    const entry = current();
-    if (!entry.content.trim() || entry.content.trim() === TEMPLATE.trim()) { status('先写下一条实际进展，再保存日志。'); return; }
+  const fingerprint = entry => JSON.stringify([entry.title, entry.content, entry.projects, entry.carryover || null]);
+  async function save({ automatic = false } = {}) {
+    if (!session() || busy || saving || !loaded) return;
+    if (automatic && (!dirty || autoPaused)) return;
+    const entry = current(), date = entry.date, original = baseline;
+    if (!entry.content.trim() || entry.content.trim() === TEMPLATE.trim()) {
+      if (!automatic) status('先写下一条实际进展，再保存日志。');
+      return;
+    }
     dirty = true;
     if (!remember()) return;
-    busy = true; controls(); render(); status('正在保存到云端…');
+    saving = true; if (!automatic) busy = true;
+    controls(); status(automatic ? '正在自动保存到云端…' : '正在保存到云端…');
     try {
-      const remote = await request(selected, { headers: { 'X-Firebase-ETag': 'true' } });
-      if (JSON.stringify(remote.value) !== JSON.stringify(baseline)) {
-        // Compare objects independent of the JSON key order returned by Firebase.
-        const equal = remote.value && baseline && ['date', 'title', 'content', 'updatedAt'].every(field => remote.value[field] === baseline[field]) && JSON.stringify(remote.value.projects || []) === JSON.stringify(baseline.projects || []);
-        if (!equal) throw new Error('云端已有更新。草稿已保留，请导出草稿后刷新云端，核对再保存。');
+      const remote = await request(date, { headers: { 'X-Firebase-ETag': 'true' } });
+      if (JSON.stringify(remote.value) !== JSON.stringify(original)) {
+        const equal = remote.value && original && ['date', 'title', 'content', 'updatedAt'].every(field => remote.value[field] === original[field]) && JSON.stringify(remote.value.projects || []) === JSON.stringify(original.projects || []);
+        if (!equal) throw Object.assign(new Error('云端已有更新。草稿已保留，请导出草稿后刷新云端，核对再保存。'), { conflict: true });
       }
       if (!remote.etag) throw new Error('无法取得云端版本号，请稍后重试');
-      await request(selected, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'if-match': remote.etag }, body: JSON.stringify(entry) });
-      records[selected] = entry; baseline = entry; dirty = false; delete drafts[selected];
+      await request(date, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'if-match': remote.etag }, body: JSON.stringify(entry) });
+      records[date] = entry;
+      if (selected === date) {
+        baseline = entry;
+        if (fingerprint(current()) === fingerprint(entry)) { dirty = false; delete drafts[date]; }
+        else remember();
+        status(dirty ? '已同步此前内容，最新修改保留为草稿，将在下一次自动保存时同步。' : automatic ? '已自动保存到云端。' : '已保存到云端。');
+      } else if (drafts[date] && fingerprint(drafts[date]) === fingerprint(entry)) delete drafts[date];
       store(CACHE, records); store(DRAFTS, drafts);
-      status('已保存到云端。'); $('journal-sync').textContent = '上次同步：' + new Date().toLocaleTimeString('zh-CN');
-    } catch (error) { status(`${error.message}。本机草稿仍保留，可重试或导出。`); }
-    finally { busy = false; controls(); render(); }
+      $('journal-sync').textContent = `${date} 上次同步：` + new Date().toLocaleTimeString('zh-CN');
+    } catch (error) {
+      if (error.conflict) autoPaused = true;
+      const message = `${error.message}。本机草稿仍保留。${error.conflict ? '自动保存已暂停，请先核对云端版本。' : '稍后可重试。'}`;
+      if (selected === date) status(message); else $('journal-sync').textContent = `${date}：${message}`;
+    } finally { saving = false; busy = false; controls(); render(); }
   }
   function download(name, text, type) {
     const url = URL.createObjectURL(new Blob([text], { type })), link = document.createElement('a');
@@ -316,6 +340,11 @@
   });
   ['pointerdown', 'keydown'].forEach(event => $('journal-app').addEventListener(event, activity));
   setInterval(session, 60000);
+  setInterval(() => {
+    if (!dirty || busy || saving || !loaded || autoPaused || !window.subsystemSession?.isLoggedIn()) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    return save({ automatic: true });
+  }, 30000);
   window.addEventListener('beforeunload', event => { if (dirty && !remember()) { event.preventDefault(); event.returnValue = ''; } });
   document.addEventListener('visibilitychange', () => { if (document.hidden) remember(); else session(); });
   window.addEventListener('offline', () => { $('journal-sync').textContent = '当前离线，编辑内容仍会保存在本机草稿。'; });

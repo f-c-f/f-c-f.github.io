@@ -4,9 +4,9 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 // Exercise page events with a small DOM and an isolated Firebase transport.
-function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {} } = {}) {
+function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {}, beforePut } = {}) {
   class Element {
-    constructor() { this.value = ''; this.children = []; this.events = {}; this.dataset = {}; this.classList = { toggle() {} }; }
+    constructor(tag = 'div') { this.tagName = tag; this.isConnected = true; this.value = ''; this.children = []; this.events = {}; this.dataset = {}; this.classList = { toggle() {} }; }
     addEventListener(event, action) { this.events[event] = action; }
     append(...children) { this.children.push(...children); }
     replaceChildren(...children) { this.children = children; }
@@ -15,26 +15,26 @@ function setup({ cloud = null, fail = false, storageFailure = false, initialStor
     click() {}
     fire(event) { return this.events[event]?.({ target: this }); }
   }
-  const elements = new Map(), storage = new Map(Object.entries(initialStorage)), requests = [];
+  const elements = new Map(), storage = new Map(Object.entries(initialStorage)), requests = [], timers = new Map();
   const el = id => { if (!elements.has(id)) elements.set(id, new Element()); return elements.get(id); };
   let remote = cloud;
   const context = {
-    document: { getElementById: el, createElement: () => new Element(), body: new Element(), addEventListener() {} },
+    document: { getElementById: el, createElement: tag => new Element(tag), body: new Element(), addEventListener() {} },
     localStorage: { getItem: key => storage.get(key), setItem(key, value) { if (storageFailure) throw Error('quota'); storage.set(key, value); }, removeItem: key => storage.delete(key) },
     location: {}, Option: function(text, value) { this.text = text; this.value = value; },
-    setInterval() {}, setTimeout: () => 1, clearTimeout() {}, AbortController,
+    setInterval(fn, ms) { timers.set(ms, fn); }, setTimeout: () => 1, clearTimeout() {}, AbortController,
     fetch: async (url, options = {}) => {
       requests.push({ url, options });
       if (fail) throw Error('offline');
       const date = url.match(/\/(\d{4}-\d{2}-\d{2})\.json$/)?.[1];
       const value = date ? remote?.[date] ?? null : remote;
-      if (options.method === 'PUT') remote = { ...remote, [date]: JSON.parse(options.body) };
+      if (options.method === 'PUT') { if (beforePut) await beforePut(); remote = { ...remote, [date]: JSON.parse(options.body) }; }
       return { ok: true, headers: { get: () => '"test-version"' }, json: async () => value };
     }
   };
   context.window = { JournalCarryover: require('../../subsystem/journal/carryover.js'), subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync(__dirname + '/../../subsystem/journal/app.js', 'utf8'), context);
-  return { el, storage, requests, setRemote(value) { remote = value; }, getRemote: () => remote };
+  return { el, storage, requests, setRemote(value) { remote = value; }, getRemote: () => remote, tick: ms => timers.get(ms)?.(), setFail(value) { fail = value; } };
 }
 const settle = () => new Promise(resolve => setImmediate(resolve));
 const localDay = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
@@ -111,6 +111,69 @@ test('storage failure blocks navigation away from an unsaved draft', async () =>
 });
 
 const carry = require('../../subsystem/journal/carryover.js');
+test('30-second autosave writes changed content once and skips unchanged content', async () => {
+  const app = setup(); await settle();
+  await app.tick(30000); assert.equal(app.requests.length, 1);
+  app.el('journal-fallback').value = '自动保存内容'; app.el('journal-fallback').fire('input');
+  await app.tick(30000);
+  assert.equal(app.getRemote()[localDay()].content, '自动保存内容');
+  assert.match(app.el('journal-status').textContent, /已自动保存/);
+  await app.tick(30000);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+});
+test('typing during an autosave is retained for the next save and the editor stays enabled', async () => {
+  let release;
+  const app = setup({ beforePut: () => new Promise(resolve => { release = resolve; }) }); await settle();
+  app.el('journal-fallback').value = '第一版'; app.el('journal-fallback').fire('input');
+  const pending = app.tick(30000); await settle();
+  assert.equal(app.el('journal-fallback').disabled, false);
+  app.el('journal-fallback').value = '第二版'; app.el('journal-fallback').fire('input');
+  await app.tick(30000);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+  release(); await pending;
+  assert.equal(app.getRemote()[localDay()].content, '第一版');
+  assert.equal(JSON.parse(app.storage.get('work-journal-drafts-v1'))[localDay()].content, '第二版');
+  const next = app.tick(30000); await settle(); release(); await next;
+  assert.equal(app.getRemote()[localDay()].content, '第二版');
+});
+test('switching dates during autosave cannot write the old content into the new date', async () => {
+  let release;
+  const app = setup({ beforePut: () => new Promise(resolve => { release = resolve; }) }); await settle();
+  const original = localDay();
+  app.el('journal-fallback').value = '今天的内容'; app.el('journal-fallback').fire('input');
+  const pending = app.tick(30000); await settle();
+  app.el('journal-date').value = '2024-02-29'; app.el('journal-date').fire('change');
+  app.el('journal-fallback').value = '另一天的内容'; app.el('journal-fallback').fire('input');
+  release(); await pending;
+  assert.equal(app.getRemote()[original].content, '今天的内容');
+  assert.equal(app.getRemote()['2024-02-29'], undefined);
+  assert.equal(app.el('journal-fallback').value, '另一天的内容');
+});
+test('autosave preserves failed drafts and retries network failures, but pauses on conflict', async () => {
+  const app = setup(); await settle();
+  app.el('journal-fallback').value = '本机内容'; app.el('journal-fallback').fire('input');
+  app.setFail(true); await app.tick(30000);
+  assert.match(app.storage.get('work-journal-drafts-v1'), /本机内容/);
+  app.setFail(false); await app.tick(30000);
+  assert.equal(app.getRemote()[localDay()].content, '本机内容');
+  app.el('journal-fallback').value = '本机再修改'; app.el('journal-fallback').fire('input');
+  app.setRemote({ [localDay()]: record(localDay(), '其他设备内容') });
+  await app.tick(30000); const count = app.requests.length;
+  await app.tick(30000); assert.equal(app.requests.length, count);
+  assert.match(app.el('journal-status').textContent, /自动保存已暂停/);
+});
+test('weekly and historical records start collapsed and retain explicit expansion across renders', async () => {
+  const date = localDay(), app = setup({ cloud: { [date]: record(date, '详细正文') } }); await settle();
+  const history = app.el('journal-history').children[0], week = app.el('journal-week').children[0];
+  assert.equal(history.tagName, 'details'); assert.equal(history.open, false); assert.equal(week.open, false);
+  assert.equal(week.children[0].tagName, 'summary');
+  assert.doesNotMatch(week.children[0].textContent, /详细正文/);
+  assert.equal(week.children[1].textContent, '详细正文');
+  week.open = true; week.fire('toggle');
+  app.el('journal-title').value = '新标题'; app.el('journal-title').fire('input');
+  assert.equal(app.el('journal-week').children[0].open, true);
+  assert.equal(app.el('journal-history').children[0].open, false);
+});
 const record = (date, content) => ({ date, title: '', projects: [], content, updatedAt: '2026-01-01T00:00:00Z' });
 test('yesterday plans initialize today once and remain independent after saving', async () => {
   const date = localDay(), yesterday = carry.previousDay(date);

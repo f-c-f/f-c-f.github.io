@@ -7,11 +7,11 @@ subsystem_private: true
 excerpt: "记录每天的进展，让积累看得见。"
 styles:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.css
-  - /subsystem/journal/style.css?v=20261020-3
+  - /subsystem/journal/style.css?v=20261022-2
 scripts:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js
   - /subsystem/journal/carryover.js?v=20261022-1
-  - /subsystem/journal/app.js?v=20261022-1
+  - /subsystem/journal/app.js?v=20261022-2
 ---
 
 <div id="journal-app" class="journal" hidden>
@@ -32,7 +32,7 @@ scripts:
       </details>
       <div class="journal-actions"><button id="journal-save" type="button">保存当天日志</button><button id="journal-template" type="button" class="journal-secondary">插入每日模板</button><button id="journal-export-day" type="button" class="journal-secondary">导出当天</button></div>
       <p id="journal-status" role="status" aria-live="polite">正在准备编辑器…</p>
-      <p class="journal-hint">当天的内容始终显示在这一个编辑框里，可直接续写和修改。输入自动保存本机草稿，保存当天日志后同步到云端。</p>
+      <p class="journal-hint">输入即时保存本机草稿，每 30 秒自动同步当前日志的修改，也可手动保存。离线或版本冲突时保留草稿。</p>
     </section>
     <h2 class="journal-browse-title">查询以前的日志</h2>
   <section class="journal-browse" aria-label="查询历史日志">
@@ -55,8 +55,9 @@ scripts:
     <section class="journal-card">
       <div class="journal-heading"><h2>每周回顾</h2><button id="journal-export-week" type="button" class="journal-secondary">导出本周</button></div>
       <p id="journal-week-label" class="journal-hint"></p>
-      <h3 id="journal-week-completed-title">本周已完成任务</h3>
-      <ul id="journal-week-completed"></ul>
+      <details class="journal-week-entry"><summary id="journal-week-completed-title">本周已完成任务</summary>
+        <ul id="journal-week-completed"></ul>
+      </details>
       <div id="journal-week"></div>
     </section>
     <div class="journal-actions journal-footer"><button id="journal-reload" type="button" class="journal-secondary">刷新云端</button><button id="journal-export-all" type="button" class="journal-secondary">备份全部 JSON</button><span id="journal-sync" role="status"></span></div>
