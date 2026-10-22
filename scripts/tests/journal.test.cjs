@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 // Exercise page events with a small DOM and an isolated Firebase transport.
-function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {}, beforePut } = {}) {
+function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {}, beforePut, markdownRenderer, htmlSanitizer } = {}) {
   class Element {
     constructor(tag = 'div') { this.tagName = tag; this.isConnected = true; this.value = ''; this.children = []; this.events = {}; this.dataset = {}; this.classList = { toggle() {} }; }
     addEventListener(event, action) { this.events[event] = action; }
@@ -32,7 +32,7 @@ function setup({ cloud = null, fail = false, storageFailure = false, initialStor
       return { ok: true, headers: { get: () => '"test-version"' }, json: async () => value };
     }
   };
-  context.window = { JournalCarryover: require('../../subsystem/journal/carryover.js'), subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
+  context.window = { marked: markdownRenderer, DOMPurify: htmlSanitizer, JournalCarryover: require('../../subsystem/journal/carryover.js'), subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync(__dirname + '/../../subsystem/journal/app.js', 'utf8'), context);
   return { el, storage, requests, setRemote(value) { remote = value; }, getRemote: () => remote, tick: ms => timers.get(ms)?.(), setFail(value) { fail = value; } };
 }
@@ -168,11 +168,26 @@ test('weekly and historical records start collapsed and retain explicit expansio
   assert.equal(history.tagName, 'details'); assert.equal(history.open, false); assert.equal(week.open, false);
   assert.equal(week.children[0].tagName, 'summary');
   assert.doesNotMatch(week.children[0].textContent, /详细正文/);
-  assert.equal(week.children[1].textContent, '详细正文');
+  assert.equal(week.children[1].textContent, '');
   week.open = true; week.fire('toggle');
+  assert.equal(week.children[1].textContent, '详细正文');
   app.el('journal-title').value = '新标题'; app.el('journal-title').fire('input');
   assert.equal(app.el('journal-week').children[0].open, true);
   assert.equal(app.el('journal-history').children[0].open, false);
+});
+test('expanded journal bodies render sanitized Markdown lazily and label missing project tags clearly', async () => {
+  const parsed = [], sanitized = [], date = localDay();
+  const app = setup({ cloud: { [date]: record(date, '## 任务\n**重点**') },
+    markdownRenderer: { parse(text) { parsed.push(text); return '<h2>任务</h2><strong>重点</strong><script>bad()</script>'; } },
+    htmlSanitizer: { sanitize(html) { sanitized.push(html); return '<h2>任务</h2><strong>重点</strong>'; } } });
+  await settle();
+  const week = app.el('journal-week').children[0];
+  assert.match(week.children[0].textContent, /未设置项目/);
+  assert.equal(parsed.length, 0);
+  week.open = true; week.fire('toggle');
+  assert.equal(parsed[0], '## 任务\n**重点**'); assert.equal(sanitized.length, 1);
+  assert.equal(week.children[1].innerHTML, '<h2>任务</h2><strong>重点</strong>');
+  week.fire('toggle'); assert.equal(parsed.length, 1);
 });
 const record = (date, content) => ({ date, title: '', projects: [], content, updatedAt: '2026-01-01T00:00:00Z' });
 test('yesterday plans initialize today once and remain independent after saving', async () => {

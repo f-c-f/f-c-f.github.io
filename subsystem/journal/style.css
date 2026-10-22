@@ -36,6 +36,18 @@
 .journal-week-entry summary { cursor: pointer; font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
 .journal-week-entry[open] > summary { margin-bottom: 12px; }
 .journal-week-entry button { margin-top: 12px; }
+.journal-records > summary { cursor: pointer; font-weight: 600; font-size: 1.08rem; }
+.journal-records[open] > summary { margin-bottom: 20px; }
+.journal-markdown { overflow-x: auto; overflow-wrap: anywhere; font-size: .85rem; }
+.journal-markdown.is-plain { white-space: pre-wrap; }
+.journal .journal-markdown h1 { display: block; font-size: 1.5rem; }
+.journal .journal-markdown h2 { display: block; font-size: 1.2rem; margin: 20px 0 12px; }
+.journal .journal-markdown h3 { font-size: 1rem; margin: 16px 0 10px; }
+.journal .journal-markdown pre { padding: 12px; background: var(--global-code-background-color, #f6f8fa); font-family: monospace; white-space: pre; overflow: auto; }
+.journal .journal-markdown input[type="checkbox"] { width: 1em; height: 1em; padding: 0; margin-right: .5em; accent-color: var(--journal-accent); }
+.journal .journal-markdown li.journal-task-item { list-style: none; }
+.journal-markdown table { width: 100%; border-collapse: collapse; }
+.journal-markdown th, .journal-markdown td { border: 1px solid var(--global-border-color, #dce5e3); padding: 8px; }
 .journal-week-entry h3 { margin: 0 0 8px; font-size: .85rem; }
 .journal-week-entry pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: inherit; font: inherit; font-size: .8rem; line-height: 1.8; max-height: 260px; overflow: auto; }
 .journal-footer { margin: 0 0 24px; }

@@ -165,14 +165,29 @@
     }
   }
   function entryDetails(entry, expanded) {
-    const details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('pre'), edit = document.createElement('button');
+    const details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('div'), edit = document.createElement('button');
     details.className = 'journal-week-entry'; details.open = expanded.has(entry.date);
-    summary.textContent = `${entry.date} · ${entry.projects.join(' / ') || entry.title || '未分类'}${drafts[entry.date] ? ' · 草稿' : ''}`;
-    body.textContent = entry.content; edit.textContent = '编辑这天的记录'; edit.type = 'button'; edit.disabled = busy; edit.className = 'journal-secondary';
+    summary.textContent = `${entry.date} · ${entry.projects.join(' / ') || '未设置项目'}${drafts[entry.date] ? ' · 草稿' : ''}`;
+    body.className = 'journal-markdown vditor-reset'; body.textContent = '';
+    const showBody = () => {
+      if (body.dataset.rendered) return;
+      if (window.marked?.parse && window.DOMPurify?.sanitize) {
+        body.innerHTML = window.DOMPurify.sanitize(window.marked.parse(entry.content, { gfm: true, breaks: true }), {
+          USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'button', 'textarea', 'select', 'iframe']
+        });
+        body.querySelectorAll?.('input').forEach(input => {
+          input.disabled = true;
+          if (input.type === 'checkbox') input.closest('li')?.classList.add('journal-task-item');
+        });
+      } else { body.textContent = entry.content; body.classList.toggle('is-plain', true); }
+      body.dataset.rendered = 'true';
+    };
+    if (details.open) showBody();
+    edit.textContent = '编辑这天的记录'; edit.type = 'button'; edit.disabled = busy; edit.className = 'journal-secondary';
     edit.addEventListener('click', () => openDate(entry.date));
     details.addEventListener('toggle', () => {
       if (!details.isConnected) return;
-      if (details.open) expanded.add(entry.date); else expanded.delete(entry.date);
+      if (details.open) { expanded.add(entry.date); showBody(); } else expanded.delete(entry.date);
     });
     details.append(summary, body, edit); return details;
   }

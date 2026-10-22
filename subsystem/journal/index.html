@@ -7,11 +7,13 @@ subsystem_private: true
 excerpt: "记录每天的进展，让积累看得见。"
 styles:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.css
-  - /subsystem/journal/style.css?v=20261022-2
+  - /subsystem/journal/style.css?v=20261022-3
 scripts:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js
+  - https://cdn.jsdelivr.net/npm/marked@18.0.6/lib/marked.umd.js
+  - https://cdn.jsdelivr.net/npm/dompurify@3.4.7/dist/purify.min.js
   - /subsystem/journal/carryover.js?v=20261022-1
-  - /subsystem/journal/app.js?v=20261022-2
+  - /subsystem/journal/app.js?v=20261022-3
 ---
 
 <div id="journal-app" class="journal" hidden>
@@ -34,7 +36,8 @@ scripts:
       <p id="journal-status" role="status" aria-live="polite">正在准备编辑器…</p>
       <p class="journal-hint">输入即时保存本机草稿，每 30 秒自动同步当前日志的修改，也可手动保存。离线或版本冲突时保留草稿。</p>
     </section>
-    <h2 class="journal-browse-title">查询以前的日志</h2>
+    <details id="journal-records" class="journal-card journal-records">
+      <summary>历史记录与查询</summary>
   <section class="journal-browse" aria-label="查询历史日志">
     <section class="journal-card">
       <div class="journal-heading"><button id="month-prev" type="button" aria-label="上个月">‹</button><h2 id="month-label"></h2><button id="month-next" type="button" aria-label="下个月">›</button></div>
@@ -52,6 +55,7 @@ scripts:
       <div id="journal-history" class="journal-history"></div>
     </section>
   </section>
+    </details>
     <section class="journal-card">
       <div class="journal-heading"><h2>每周回顾</h2><button id="journal-export-week" type="button" class="journal-secondary">导出本周</button></div>
       <p id="journal-week-label" class="journal-hint"></p>
