@@ -34,7 +34,7 @@
     if (Date.now() - lastActivity < 30000) return;
     if (session()) { lastActivity = Date.now(); localStorage.setItem('loginTime', String(lastActivity)); }
   }
-  const content = () => editorReady ? editor.getValue() : $('journal-fallback').value;
+  const content = () => (editorReady ? editor.getValue() : $('journal-fallback').value).replace(/\u200b/g, '');
   function current() {
     return { date: selected, title: $('journal-title').value.trim(), content: content(),
       projects: [...new Set($('journal-projects').value.split(/[,，、]/).map(item => item.trim()).filter(Boolean))], updatedAt: new Date().toISOString(),
@@ -52,6 +52,7 @@
     render();
   }
   function putContent(value) {
+    value = carry.asTaskLists(value);
     changing = true;
     if (editorReady) { editor.setValue(value, true); editor.clearStack(); }
     else $('journal-fallback').value = value;
@@ -232,6 +233,58 @@
   $('journal-editor').hidden = true;
   select(selected);
   $('journal-fallback').addEventListener('input', changed);
+  $('journal-fallback').addEventListener('keydown', event => {
+    if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+    const field = $('journal-fallback');
+    const next = carry.continueTask(field.value, field.selectionStart, field.selectionEnd);
+    if (!next) return;
+    event.preventDefault(); field.value = next.text;
+    field.setSelectionRange(next.caret, next.caret); changed();
+  });
+  // Vditor sometimes continues a task as an ordinary list item. Preserve the
+  // new item's caret and inline markup instead of replacing the whole editor.
+  $('journal-editor').addEventListener('keydown', event => {
+    if (!editorReady || busy || event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing) return;
+    const selection = window.getSelection();
+    if (!selection?.isCollapsed) return;
+    const anchor = selection?.anchorNode;
+    const element = anchor?.nodeType === 1 ? anchor : anchor?.parentElement;
+    const previous = element?.closest('li');
+    if (!previous || !$('journal-editor').contains(previous) || !previous.querySelector(':scope > input[type="checkbox"], :scope > p > input[type="checkbox"]')) return;
+    if (!previous.textContent.replace(/\u200b/g, '').trim()) {
+      event.preventDefault(); event.stopPropagation();
+      const list = previous.parentElement, paragraph = document.createElement('p');
+      paragraph.setAttribute('data-block', '0'); paragraph.append(document.createElement('br'));
+      list.parentNode.insertBefore(paragraph, list.nextSibling); previous.remove();
+      if (!list.children.length) list.remove();
+      const range = document.createRange(); range.setStart(paragraph, 0); range.collapse(true);
+      selection.removeAllRanges(); selection.addRange(range);
+      paragraph.dispatchEvent(new Event('input', { bubbles: true })); changed();
+      return;
+    }
+    setTimeout(() => {
+      const currentSelection = window.getSelection();
+      const node = currentSelection?.anchorNode;
+      const currentElement = node?.nodeType === 1 ? node : node?.parentElement;
+      const item = currentElement?.closest('li');
+      if (!item || item === previous || !$('journal-editor').contains(item)) return;
+      const taskBody = item.querySelector(':scope > p') || item;
+      let checkbox = item.querySelector(':scope > input[type="checkbox"], :scope > p > input[type="checkbox"]');
+      if (!checkbox) {
+        checkbox = document.createElement('input'); checkbox.type = 'checkbox';
+        taskBody.insertBefore(checkbox, taskBody.firstChild);
+      }
+      checkbox.checked = false; checkbox.removeAttribute('checked');
+      if (!item.textContent.trim()) taskBody.append(document.createTextNode('\u200b'));
+      item.classList.add('vditor-task'); item.classList.remove('vditor-task--done');
+      item.setAttribute('data-marker', '-');
+      if (currentSelection.rangeCount && currentSelection.anchorNode === item && currentSelection.anchorOffset === 0) {
+        const range = currentSelection.getRangeAt(0); range.setStartAfter(checkbox); range.collapse(true);
+      }
+      item.dispatchEvent(new Event('input', { bubbles: true }));
+      changed();
+    }, 0);
+  }, true);
   ['journal-title', 'journal-projects'].forEach(id => $(id).addEventListener('input', changed));
   $('journal-date').addEventListener('change', event => { if (validDate(event.target.value)) openDate(event.target.value); else event.target.value = selected; });
   $('journal-today').addEventListener('click', () => openDate(today()));

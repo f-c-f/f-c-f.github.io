@@ -10,8 +10,8 @@ styles:
   - /subsystem/journal/style.css?v=20261020-3
 scripts:
   - https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js
-  - /subsystem/journal/carryover.js?v=20261021-3
-  - /subsystem/journal/app.js?v=20261021-3
+  - /subsystem/journal/carryover.js?v=20261022-1
+  - /subsystem/journal/app.js?v=20261022-1
 ---
 
 <div id="journal-app" class="journal" hidden>
@@ -21,6 +21,7 @@ scripts:
       <label id="journal-content-label" for="journal-fallback">今天的工作进展</label>
       <div id="journal-editor" aria-labelledby="journal-content-label"></div>
       <textarea id="journal-fallback" rows="16" aria-label="Markdown 工作记录" hidden></textarea>
+      <p class="journal-hint">今日任务使用可勾选的待办列表。在任务末尾按 Enter 继续下一项，空待办按 Enter 结束列表。</p>
       <div id="journal-carry-panel" hidden>
         <p id="journal-carry-hint" class="journal-hint"></p>
         <button id="journal-carry" type="button" class="journal-secondary">从最近一次日志带入</button>

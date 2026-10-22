@@ -26,7 +26,7 @@
       if (!item) continue;
       const checkbox = item[1].match(/^\[([ xX])\](?:\s+|$)(.*)$/);
       if (checkbox && checkbox[1] !== ' ') continue;
-      const text = (checkbox ? checkbox[2] : item[1]).trim(), normalized = text.replace(/\s+/g, ' ');
+      const text = (checkbox ? checkbox[2] : item[1]).replace(/\u200b/g, '').trim(), normalized = text.replace(/\s+/g, ' ');
       if (!text || text === '填写明日计划' || seen.has(normalized)) continue;
       seen.add(normalized); result.push(text);
     }
@@ -75,7 +75,7 @@
       const item = section && line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/);
       if (!item) continue;
       const checkbox = item[1].match(/^\[([ xX])\](?:\s+|$)(.*)$/);
-      const text = (checkbox ? checkbox[2] : item[1]).trim(), normalized = text.replace(/\s+/g, ' ');
+      const text = (checkbox ? checkbox[2] : item[1]).replace(/\u200b/g, '').trim(), normalized = text.replace(/\s+/g, ' ');
       if (!text || ['填写今日任务', '填写今日待办'].includes(text)) continue;
       items.set(normalized, { text, done: Boolean(checkbox && checkbox[1] !== ' ') || Boolean(items.get(normalized)?.done) });
     }
@@ -101,7 +101,49 @@
     if (!headings.has('明日计划')) missing.push('## 明日计划\n- [ ] 填写明日计划');
     return missing.length ? [markdown.trimEnd(), ...missing].filter(Boolean).join('\n\n') + '\n' : markdown;
   }
-  const api = { previousDay, tasks, insert, progress, template };
+  function asTaskLists(markdown) {
+    let section = 0, fence = null;
+    return markdown.split('\n').map(line => {
+      const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
+        return line;
+      }
+      if (fence) return line;
+      const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+      if (heading) {
+        if (['今日任务', '今日待办'].includes(heading[2].replace(/[*_`]/g, '').trim())) section = heading[1].length;
+        else if (section && heading[1].length <= section) section = 0;
+        return line;
+      }
+      const item = section && line.match(/^(\s*)(?:[-*+]|\d+[.)])\s+(.+?)\s*$/);
+      if (!item) return line;
+      if (/^\[ \]\s*$/.test(item[2])) return `${item[1]}- [ ] \u200b`;
+      if (/^\[[ xX]\](?:\s|$)/.test(item[2])) return line;
+      return `${item[1]}- [ ] ${item[2]}`;
+    }).join('\n');
+  }
+  function continueTask(markdown, start, end = start) {
+    const lineStart = markdown.lastIndexOf('\n', start - 1) + 1;
+    let fence = null;
+    for (const line of markdown.slice(0, lineStart).split('\n')) {
+      const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
+      if (marker) {
+        if (!fence) fence = marker[1];
+        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
+      }
+    }
+    if (fence) return null;
+    const before = markdown.slice(lineStart, start);
+    const task = before.match(/^(\s*)[-*+]\s+\[[ xX]\]\s+(.*)$/);
+    if (!task || start !== end) return null;
+    const hasText = task[2].replace(/\u200b/g, '').trim();
+    const prefix = hasText ? `\n${task[1]}- [ ] ` : '\n';
+    const replaceFrom = hasText ? start : lineStart;
+    return { text: markdown.slice(0, replaceFrom) + prefix + markdown.slice(end), caret: replaceFrom + prefix.length };
+  }
+  const api = { previousDay, tasks, insert, progress, template, asTaskLists, continueTask };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.JournalCarryover = api;
 })(typeof window === 'undefined' ? globalThis : window);

@@ -2,6 +2,35 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const carry = require('../../subsystem/journal/carryover.js');
 
+test('today lists are normalized to checkboxes without changing notes, code or checked states', () => {
+  const input = '## 今日任务\n- 阅读论文\n1. 跑实验\n- [x] 已完成\n```md\n- 示例\n```\n## 进展与记录\n- 保留笔记';
+  const output = carry.asTaskLists(input);
+  assert.equal(output, input.replace('- 阅读论文', '- [ ] 阅读论文').replace('1. 跑实验', '- [ ] 跑实验'));
+  assert.equal(carry.asTaskLists(output), output);
+});
+test('Enter continues an unchecked task and resets a checked task on the new line', () => {
+  const text = '## 今日任务\n- [x] 已完成';
+  const next = carry.continueTask(text, text.length);
+  assert.equal(next.text, text + '\n- [ ] ');
+  assert.equal(next.caret, next.text.length);
+  const mid = '## 今日任务\n- [ ] 第一第二';
+  assert.equal(carry.continueTask(mid, mid.indexOf('第二')).text, '## 今日任务\n- [ ] 第一\n- [ ] 第二');
+});
+test('an empty task exits the list and code examples are not continued', () => {
+  const text = '- [ ] ';
+  assert.equal(carry.continueTask(text, text.length).text, '\n');
+  const code = '```md\n- [ ] 示例';
+  assert.equal(carry.continueTask(code, code.length), null);
+  assert.equal(carry.continueTask('- 普通列表', 6), null);
+});
+test('empty editable task markers remain checkboxes and do not count as work', () => {
+  const text = carry.asTaskLists('## 今日任务\n- [ ] ');
+  assert.match(text, /- \[ \] \u200b/);
+  assert.equal(carry.asTaskLists(text), text);
+  assert.equal(carry.progress(text).total, 0);
+  assert.equal(carry.continueTask('- [ ] \u200b', 7).text, '\n');
+});
+
 test('previous date respects leap days and year boundaries', () => {
   assert.equal(carry.previousDay('2024-03-01'), '2024-02-29');
   assert.equal(carry.previousDay('2026-01-01'), '2025-12-31');
