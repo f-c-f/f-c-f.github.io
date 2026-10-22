@@ -175,13 +175,14 @@
     $('journal-week').replaceChildren();
     if (!weekly.length) $('journal-week').textContent = '这一周还没有记录。日积月累，进展会在这里连成线。';
     for (const entry of weekly) {
-      $('journal-week').append(entryDetails(entry, expandedWeek));
+      $('journal-week').append(entryDetails(entry, expandedWeek, true));
     }
   }
-  function entryDetails(entry, expanded) {
+  function entryDetails(entry, expanded, weekly = false) {
     const details = document.createElement('details'), summary = document.createElement('summary'), body = document.createElement('div'), edit = document.createElement('button');
     details.className = 'journal-week-entry'; details.open = expanded.has(entry.date);
-    summary.textContent = `${entry.date} · ${entry.projects.join(' / ') || '未设置项目'}${drafts[entry.date] ? ' · 草稿' : ''}`;
+    summary.textContent = weekly && !entry.projects.length ? entry.date
+      : `${entry.date} · ${entry.projects.join(' / ') || '未设置项目'}${drafts[entry.date] ? ' · 草稿' : ''}`;
     body.className = 'journal-markdown vditor-reset'; body.textContent = '';
     const showBody = () => {
       if (body.dataset.rendered) return;

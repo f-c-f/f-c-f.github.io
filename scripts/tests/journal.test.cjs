@@ -182,7 +182,8 @@ test('expanded journal bodies render sanitized Markdown lazily and label missing
     htmlSanitizer: { sanitize(html) { sanitized.push(html); return '<h2>任务</h2><strong>重点</strong>'; } } });
   await settle();
   const week = app.el('journal-week').children[0];
-  assert.match(week.children[0].textContent, /未设置项目/);
+  assert.equal(week.children[0].textContent, date);
+  assert.match(app.el('journal-history').children[0].children[0].textContent, /未设置项目/);
   assert.equal(parsed.length, 0);
   week.open = true; week.fire('toggle');
   assert.equal(parsed[0], '## 任务\n**重点**'); assert.equal(sanitized.length, 1);
