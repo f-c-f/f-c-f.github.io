@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 // Exercise page events with a small DOM and an isolated Firebase transport.
-function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {}, beforePut, markdownRenderer, htmlSanitizer } = {}) {
+function setup({ cloud = null, fail = false, storageFailure = false, initialStorage = {}, beforePut, markdownRenderer, htmlSanitizer, clock } = {}) {
   class Element {
     constructor(tag = 'div') { this.tagName = tag; this.isConnected = true; this.value = ''; this.children = []; this.events = {}; this.dataset = {}; this.classList = { toggle() {} }; }
     addEventListener(event, action) { this.events[event] = action; }
@@ -32,6 +32,7 @@ function setup({ cloud = null, fail = false, storageFailure = false, initialStor
       return { ok: true, headers: { get: () => '"test-version"' }, json: async () => value };
     }
   };
+  if (clock) context.Date = class extends Date { constructor(...args) { super(...(args.length ? args : [clock()])); } static now() { return clock(); } };
   context.window = { marked: markdownRenderer, DOMPurify: htmlSanitizer, JournalCarryover: require('../../subsystem/journal/carryover.js'), subsystemSession: { isLoggedIn: () => true }, addEventListener() {} };
   vm.runInNewContext(fs.readFileSync(__dirname + '/../../subsystem/journal/app.js', 'utf8'), context);
   return { el, storage, requests, setRemote(value) { remote = value; }, getRemote: () => remote, tick: ms => timers.get(ms)?.(), setFail(value) { fail = value; } };
@@ -294,17 +295,29 @@ test('completed task summaries render inline Markdown and old escaped strike-thr
   assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
 });
 
-test('forward button creates a local draft once and saves through the existing autosave', async () => {
-  const date = localDay(), original = '## 今日任务\n- [ ] 阅读论文\n- [x] 完成实验';
-  const app = setup({ cloud: { [date]: record(date, original) } }); await settle();
-  app.el('journal-forward').fire('click');
-  const content = app.el('journal-fallback').value;
-  assert.match(content, /## 明日计划\n- \[ \] 阅读论文/);
-  assert.match(content, /- \[x\] 完成实验/);
-  assert.equal(app.getRemote()[date].content, original);
-  assert.equal(JSON.parse(app.storage.get('work-journal-drafts-v1'))[date].content, content);
-  app.el('journal-forward').fire('click');
-  assert.equal(app.el('journal-fallback').value, content);
-  await app.tick(30000);
-  assert.equal(app.getRemote()[date].content, content);
+test('first open after midnight merges yesterday pending tasks then imports them today', async () => {
+  const date = localDay(), yesterday = require('../../subsystem/journal/carryover.js').previousDay(date);
+  const original = '## 今日任务\n- [ ] 阅读论文\n- [x] 完成实验\n## 明日计划\n- 跑实验';
+  const app = setup({ cloud: { [yesterday]: record(yesterday, original) } }); await settle(); await settle();
+  assert.match(app.getRemote()[yesterday].content, /## 明日计划\n- \[ \] 阅读论文/);
+  assert.match(app.el('journal-fallback').value, /阅读论文/);
+  assert.match(app.el('journal-fallback').value, /跑实验/);
+  assert.doesNotMatch(app.el('journal-fallback').value, /完成实验/);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+  await app.el('journal-reload').fire('click');
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+});
+
+test('an open page crossing midnight saves unfinished tasks and switches to the new day', async () => {
+  let now = new Date('2026-10-22T23:59:59').getTime();
+  const date = '2026-10-22', app = setup({ clock: () => now, cloud: { [date]: record(date, '## 今日任务\n- [ ] 阅读') } });
+  await settle();
+  app.el('journal-fallback').value += '\n- [ ] 新增任务'; app.el('journal-fallback').fire('input');
+  now = new Date('2026-10-23T00:00:01').getTime();
+  await app.tick(15000);
+  assert.equal(app.el('journal-date').value, '2026-10-23');
+  assert.match(app.getRemote()[date].content, /## 明日计划\n- \[ \] 阅读\n- \[ \] 新增任务/);
+  assert.match(app.el('journal-fallback').value, /新增任务/);
+  await app.tick(15000);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
 });
