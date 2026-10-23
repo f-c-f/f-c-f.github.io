@@ -212,9 +212,11 @@ test('yesterday plans initialize today once and remain independent after saving'
 test('existing cloud entries and local drafts are never replaced by automatic carryover', async () => {
   const date = localDay(), yesterday = carry.previousDay(date), source = record(yesterday, '## 明日计划\n- [ ] 跑实验');
   const app = setup({ cloud: { [yesterday]: source, [date]: record(date, '已经写好的内容') } }); await settle();
-  assert.equal(app.el('journal-fallback').value, '已经写好的内容');
+  assert.match(app.el('journal-fallback').value, /已经写好的内容/);
+  assert.match(app.el('journal-fallback').value, /跑实验/);
   const draftApp = setup({ cloud: { [yesterday]: source }, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '尚未保存的内容') }) } });
-  await settle(); assert.equal(draftApp.el('journal-fallback').value, '尚未保存的内容');
+  await settle(); assert.match(draftApp.el('journal-fallback').value, /尚未保存的内容/);
+  assert.match(draftApp.el('journal-fallback').value, /跑实验/);
 });
 test('offline cached plans do not initialize today before the cloud has been checked', async () => {
   const yesterday = carry.previousDay(localDay());
@@ -255,9 +257,8 @@ test('plain yesterday plans initialize today and can also be imported into an ex
   const app = setup({ cloud }); await settle();
   assert.equal(app.el('journal-fallback').value, '## 今日任务\n- [ ] 阅读论文\n- [ ] 跑实验\n');
   const draftApp = setup({ cloud, initialStorage: { 'work-journal-drafts-v1': JSON.stringify({ [date]: record(date, '已有正文') }) } });
-  await settle(); assert.equal(draftApp.el('journal-fallback').value, '已有正文');
-  assert.equal(draftApp.el('journal-carry-panel').hidden, false);
-  assert.equal(draftApp.el('journal-carry').textContent, '从昨天日志带入');
+  await settle(); assert.match(draftApp.el('journal-fallback').value, /已有正文/);
+  assert.equal(draftApp.el('journal-carry-panel').hidden, true);
   draftApp.el('journal-carry').fire('click'); draftApp.el('journal-carry').fire('click');
   assert.match(draftApp.el('journal-fallback').value, /已有正文/);
   assert.equal(draftApp.el('journal-fallback').value.match(/阅读论文/g).length, 1);
@@ -299,13 +300,13 @@ test('first open after midnight merges yesterday pending tasks then imports them
   const date = localDay(), yesterday = require('../../subsystem/journal/carryover.js').previousDay(date);
   const original = '## 今日任务\n- [ ] 阅读论文\n- [x] 完成实验\n## 明日计划\n- 跑实验';
   const app = setup({ cloud: { [yesterday]: record(yesterday, original) } }); await settle(); await settle();
-  assert.match(app.getRemote()[yesterday].content, /## 明日计划\n- \[ \] 阅读论文/);
+  assert.equal(app.getRemote()[yesterday].content, original);
   assert.match(app.el('journal-fallback').value, /阅读论文/);
   assert.match(app.el('journal-fallback').value, /跑实验/);
   assert.doesNotMatch(app.el('journal-fallback').value, /完成实验/);
-  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
   await app.el('journal-reload').fire('click');
-  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
 });
 
 test('an open page crossing midnight saves unfinished tasks and switches to the new day', async () => {
@@ -316,8 +317,26 @@ test('an open page crossing midnight saves unfinished tasks and switches to the 
   now = new Date('2026-10-23T00:00:01').getTime();
   await app.tick(15000);
   assert.equal(app.el('journal-date').value, '2026-10-23');
-  assert.match(app.getRemote()[date].content, /## 明日计划\n- \[ \] 阅读\n- \[ \] 新增任务/);
+  assert.equal(app.getRemote()[date].content, '## 今日任务\n- [ ] 阅读');
+  assert.match(JSON.parse(app.storage.get('work-journal-drafts-v1'))[date].content, /新增任务/);
   assert.match(app.el('journal-fallback').value, /新增任务/);
   await app.tick(15000);
-  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 1);
+  assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
+});
+
+test('old carryover markers upgrade once without resetting completed tasks or rewriting yesterday', async () => {
+  const date = localDay(), yesterday = carry.previousDay(date);
+  const source = record(yesterday, '## 今日任务\n- [ ] 已带入\n- [ ] 遗留\n## 明日计划\n- 新计划\n- 遗留');
+  const target = { ...record(date, '## 今日任务\n- [x] 已带入\n## 进展与记录\n今天正文'), carryover: { sourceDate: yesterday, importedAt: 'old' } };
+  const app = setup({ cloud: { [date]: target, [yesterday]: source } }); await settle();
+  const text = app.el('journal-fallback').value;
+  assert.match(text, /- \[x\] 已带入/);
+  assert.equal(text.match(/遗留/g).length, 1);
+  assert.match(text, /今天正文/);
+  await app.tick(30000);
+  assert.equal(app.getRemote()[date].carryover.taskVersion, 2);
+  assert.deepEqual(app.getRemote()[yesterday], source);
+  assert.ok(app.requests.filter(item => item.options.method === 'PUT').every(item => item.url.endsWith('/' + date + '.json')));
+  await app.el('journal-reload').fire('click');
+  assert.equal(app.el('journal-fallback').value, text);
 });

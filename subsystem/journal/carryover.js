@@ -34,7 +34,8 @@
   }
   function insert(markdown, items) {
     let fence = null, at = -1, offset = 0;
-    const existing = new Set();
+    const today = progress(markdown, true);
+    const existing = new Set([...today.pending, ...today.completed].map(text => text.replace(/\s+/g, ' ')));
     for (const line of markdown.split('\n')) {
       const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
       if (marker) {
@@ -42,8 +43,6 @@
         else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
       } else if (!fence) {
         if (at < 0 && /^#{1,6}[ \t]+(?:今日任务|今日待办)[ \t]*#*[ \t]*\r?$/.test(line)) at = offset + line.length;
-        const task = line.match(/^\s*[-*+]\s+\[[ xX]\]\s+(.+?)\s*$/);
-        if (task) existing.add(task[1].trim().replace(/\s+/g, ' '));
       }
       offset += line.length + 1;
     }
@@ -83,37 +82,13 @@
     return { total: items.size, done: completed.length, completed,
       ...(includePending ? { pending: [...items.values()].filter(item => !item.done).map(item => item.text) } : {}) };
   }
-  function toTomorrow(markdown) {
-    const pending = progress(markdown, true).pending;
-    let fence = null, section = 0, at = -1, offset = 0;
-    const existing = new Set();
-    const normalize = text => text.replace(/\u200b/g, '').trim().replace(/\s+/g, ' ');
-    for (const line of markdown.split('\n')) {
-      const marker = line.match(/^\s{0,3}(`{3,}|~{3,})/);
-      if (marker) {
-        if (!fence) fence = marker[1];
-        else if (marker[1][0] === fence[0] && marker[1].length >= fence.length) fence = null;
-      } else if (!fence) {
-        const heading = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
-        if (heading) {
-          if (heading[2].replace(/[*_`]/g, '').trim() === '明日计划') {
-            section = heading[1].length;
-            if (at < 0) at = offset + line.length;
-          } else if (section && heading[1].length <= section) section = 0;
-        } else if (section) {
-          const item = line.match(/^\s*(?:[-*+]|\d+[.)])\s+(.+?)\s*$/);
-          if (item) existing.add(normalize(item[1].replace(/^\[[ xX]\](?:\s+|$)/, '')));
-        }
-      }
-      offset += line.length + 1;
-    }
-    const items = pending.filter(text => !existing.has(normalize(text)));
-    if (!items.length) return { content: markdown, added: 0 };
-    // Do not append a new heading inside an unfinished code block.
-    if (at < 0 && fence) return { content: markdown, added: 0, blocked: true };
-    const lines = items.map(text => `- [ ] ${text}`).join('\n');
-    return { content: at < 0 ? `${markdown.trimEnd()}\n\n## 明日计划\n${lines}\n`
-      : `${markdown.slice(0, at)}\n${lines}${markdown.slice(at)}`, added: items.length };
+  function nextTasks(markdown) {
+    const seen = new Set();
+    return [...progress(markdown, true).pending, ...tasks(markdown)].filter(text => {
+      const key = text.replace(/\s+/g, ' ');
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
   }
   function template(markdown) {
     let fence = null;
@@ -176,7 +151,7 @@
     const replaceFrom = hasText ? start : lineStart;
     return { text: markdown.slice(0, replaceFrom) + prefix + markdown.slice(end), caret: replaceFrom + prefix.length };
   }
-  const api = { previousDay, tasks, insert, progress, template, asTaskLists, continueTask, toTomorrow };
+  const api = { previousDay, tasks, insert, progress, template, asTaskLists, continueTask, nextTasks };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.JournalCarryover = api;
 })(typeof window === 'undefined' ? globalThis : window);

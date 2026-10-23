@@ -73,20 +73,12 @@ test('the three-section template is repeatable and does not duplicate imported o
   assert.equal(upgraded.match(/## 今日完成/g).length, 1);
 });
 
-test('unfinished today tasks merge into tomorrow without changing completed tasks or duplicating plans', () => {
-  const source = '## 今日待办\n- [x] 完成论文\n- [ ] 跑实验\n- 看文献\n- [ ] 填写今日待办\n```md\n- [ ] 示例\n```\n## 进展与记录\n- 记录\n## 明日计划\n1. 跑实验\n- [x] 其他计划';
-  const result = carry.toTomorrow(source);
-  assert.equal(result.added, 1);
-  assert.equal(result.content, source.replace('## 明日计划', '## 明日计划\n- [ ] 看文献'));
-  assert.deepEqual(carry.toTomorrow(result.content), { content: result.content, added: 0 });
-  assert.deepEqual(carry.tasks(result.content), ['看文献', '跑实验']);
-});
-
-test('forwarding creates a real tomorrow section and ignores fenced headings', () => {
-  const source = '## 今日任务\n- [ ] 跑实验\n- [x] 跑实验\n- [ ] 阅读\n```md\n## 明日计划\n```';
-  const result = carry.toTomorrow(source);
-  assert.equal(result.added, 1);
-  assert.equal(result.content, source + '\n\n## 明日计划\n- [ ] 阅读\n');
-  const unfinished = '## 今日任务\n- [ ] 阅读\n```';
-  assert.deepEqual(carry.toTomorrow(unfinished), { content: unfinished, added: 0, blocked: true });
+test('next-day tasks combine unfinished today tasks and plans with deduplication', () => {
+  const source = '## 今日待办\n- [x] 已完成\n- [ ] 实验\n- 阅读\n```md\n- 示例\n```\n## 明日计划\n1. 实验\n- 新计划\n- [x] 已结束';
+  assert.deepEqual(carry.nextTasks(source), ['实验', '阅读', '新计划']);
+  const target = '## 今日任务\n- [x] 实验\n- [ ] 新任务\n## 进展与记录\n保留正文\n## 明日计划\n- [ ] 阅读';
+  const merged = carry.insert(target, carry.nextTasks(source));
+  assert.match(merged, /## 今日任务\n- \[ \] 阅读\n- \[ \] 新计划\n- \[x\] 实验/);
+  assert.equal(carry.insert(merged, carry.nextTasks(source)), merged);
+  assert.match(merged, /保留正文/);
 });

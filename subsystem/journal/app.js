@@ -75,10 +75,9 @@
     putContent(entry?.content ?? '');
     status(dirty ? '已恢复本机草稿，保存后同步到云端。' : baseline ? '已载入当天日志，可在上方直接续写或修改。' : '新的一天，从一条进展开始。');
     // Wait for the cloud read before creating today's draft on this device.
-    const untouched = !entry || (!entry.content.trim() && !entry.title.trim() && !entry.projects.length && !carryover);
-    if (carry && loaded && date === today() && untouched) {
+    if (carry && loaded && date === today() && carryover?.taskVersion !== 2) {
       const source = all()[carry.previousDay(date)];
-      if (source) importPlan(source);
+      if (source) importPlan(source, true);
     }
     render();
   }
@@ -87,18 +86,18 @@
     if (!carry || !loaded || selected !== today() || carryover) return null;
     const entries = all();
     const yesterday = entries[carry.previousDay(selected)];
-    if (yesterday) return carry.tasks(yesterday.content).length ? yesterday : null;
+    if (yesterday) return carry.nextTasks(yesterday.content).length ? yesterday : null;
     const date = Object.keys(entries).filter(date => date < selected).sort().pop();
-    return date && carry.tasks(entries[date].content).length ? entries[date] : null;
+    return date && carry.nextTasks(entries[date].content).length ? entries[date] : null;
   }
-  function importPlan(source) {
-    if (!carry || busy || carryover) return;
-    const items = carry.tasks(source.content);
+  function importPlan(source, automatic = false) {
+    if (!carry || busy || (automatic ? carryover?.taskVersion === 2 : carryover)) return;
+    const items = carry.nextTasks(source.content);
     if (!items.length) return;
-    carryover = { sourceDate: source.date, importedAt: new Date().toISOString() };
+    carryover = { taskVersion: 2, sourceDate: source.date, importedAt: new Date().toISOString() };
     putContent(carry.insert(content(), items));
     dirty = true;
-    if (remember()) status(`已从 ${source.date} 带入未完成计划到“今日任务”，保存后同步到云端。`);
+    if (remember()) status(`已从 ${source.date} 带入未完成任务和计划到“今日任务”，保存后同步到云端。`);
   }
   function openDate(date) {
     select(date);
@@ -225,26 +224,6 @@
       return { value: await response.json(), etag: response.headers.get('ETag') };
     } finally { clearTimeout(timer); }
   }
-  // Catch up on first open as well as at midnight. Use a conditional write so
-  // another device's changes are never replaced by an older local snapshot.
-  async function rollYesterday() {
-    const date = carry.previousDay(today()), original = records[date];
-    const source = drafts[date] || original;
-    if (!source) return;
-    const result = carry.toTomorrow(source.content);
-    if (!result.added) return;
-    const remote = await request(date, { headers: { 'X-Firebase-ETag': 'true' } });
-    const actual = remote.value && { ...remote.value, projects: remote.value.projects ?? [] };
-    if (!remote.etag || JSON.stringify(actual) !== JSON.stringify(original || null)) {
-      throw new Error('昨天日志已有其他设备更新，请刷新后再同步未完成任务');
-    }
-    const entry = { ...source, content: result.content, updatedAt: new Date().toISOString() };
-    await request(date, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'if-match': remote.etag }, body: JSON.stringify(entry) });
-    records[date] = entry;
-    delete drafts[date];
-    if (selected === date) { baseline = entry; dirty = false; putContent(entry.content); }
-    store(CACHE, records); store(DRAFTS, drafts);
-  }
   async function load() {
     if (!session() || busy || saving) return;
     remember(); busy = true; controls();
@@ -255,7 +234,6 @@
       const normalized = Object.fromEntries(Object.entries(value || {}).map(([date, entry]) => [date, entry && { ...entry, projects: entry.projects ?? [] }]));
       if (Object.entries(normalized).some(([date, entry]) => !valid(entry) || entry.date !== date)) throw new Error('云端日志格式异常，请检查数据');
       records = normalized;
-      await rollYesterday();
       loaded = true; autoPaused = false; store(CACHE, records);
       $('journal-sync').textContent = '云端记录已更新';
     } catch (error) {
