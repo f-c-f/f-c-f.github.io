@@ -293,3 +293,18 @@ test('completed task summaries render inline Markdown and old escaped strike-thr
   assert.equal(app.getRemote()[date].content, content);
   assert.equal(app.requests.filter(item => item.options.method === 'PUT').length, 0);
 });
+
+test('forward button creates a local draft once and saves through the existing autosave', async () => {
+  const date = localDay(), original = '## 今日任务\n- [ ] 阅读论文\n- [x] 完成实验';
+  const app = setup({ cloud: { [date]: record(date, original) } }); await settle();
+  app.el('journal-forward').fire('click');
+  const content = app.el('journal-fallback').value;
+  assert.match(content, /## 明日计划\n- \[ \] 阅读论文/);
+  assert.match(content, /- \[x\] 完成实验/);
+  assert.equal(app.getRemote()[date].content, original);
+  assert.equal(JSON.parse(app.storage.get('work-journal-drafts-v1'))[date].content, content);
+  app.el('journal-forward').fire('click');
+  assert.equal(app.el('journal-fallback').value, content);
+  await app.tick(30000);
+  assert.equal(app.getRemote()[date].content, content);
+});

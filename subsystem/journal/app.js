@@ -211,7 +211,7 @@
     return dates.flatMap(date => entries[date] ? carry.progress(entries[date].content).completed.map(text => ({ date, text })) : []);
   }
   function controls() {
-    ['journal-date', 'journal-title', 'journal-projects', 'journal-template', 'journal-reload', 'journal-today', 'month-prev', 'month-next'].forEach(id => { $(id).disabled = busy; });
+    ['journal-date', 'journal-title', 'journal-projects', 'journal-forward', 'journal-template', 'journal-reload', 'journal-today', 'month-prev', 'month-next'].forEach(id => { $(id).disabled = busy; });
     $('journal-save').disabled = busy || saving || !loaded;
     $('journal-reload').disabled = busy || saving;
     if (editorReady) { if (busy) editor.disabled(); else editor.enable(); }
@@ -354,6 +354,14 @@
     if (source) { importPlan(source); render(); }
   });
   $('journal-reload').addEventListener('click', load);
+  $('journal-forward').addEventListener('click', () => {
+    if (!session() || busy) return;
+    const result = carry.toTomorrow(content());
+    if (result.added) { putContent(result.content); changed(); }
+    status(result.blocked ? '请先补全末尾代码块，再带入明日计划。' : result.added
+      ? `已将 ${result.added} 项未完成任务带入明日计划，草稿已保存在本机，等待同步。`
+      : '没有需要新增的未完成任务，明日计划已包含的事项不会重复带入。');
+  });
   $('journal-template').addEventListener('click', () => { putContent(carry.template(content())); changed(); });
   $('project-filter').addEventListener('change', render); $('journal-search').addEventListener('input', render);
   $('journal-export-day').addEventListener('click', () => download(`${selected}-工作日志.md`, markdown(current()), 'text/markdown;charset=utf-8'));
