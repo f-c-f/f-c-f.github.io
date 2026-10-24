@@ -6,6 +6,12 @@
   let records = [], editingId = null, editingSource = 'birthdays', ready = false, busy = false;
   const isCountdown = record => record?.kind === 'countdown';
   const formCountdown = () => $('birthday-kind').value === 'countdown';
+  function displayDate(value) {
+    const parts = dates.parse(value);
+    if (!parts) return '';
+    const weekday = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay();
+    return `${value}（周${'日一二三四五六'[weekday]}）`;
+  }
 
   function session() {
     if (!window.subsystemSession.isLoggedIn()) {
@@ -93,7 +99,8 @@
     $('birthday-date').required = !lunar;
     $('birthday-date').disabled = busy || lunar;
     $('birthday-lunar-fields').hidden = !lunar;
-    $('birthday-conversion').textContent = lunar ? `对应公历出生日期：${dates.lunarDate(lunarInput()) || '请选择有效日期'}` : '';
+    const selectedDate = lunar ? dates.lunarDate(lunarInput()) : $('birthday-date').value;
+    $('birthday-conversion').textContent = lunar ? `对应公历出生日期：${displayDate(selectedDate) || '请选择有效日期'}` : displayDate(selectedDate);
   }
   function reset() {
     editingId = null; editingSource = 'birthdays';
@@ -122,11 +129,11 @@
         const info = document.createElement('div');
         const name = document.createElement('strong'); name.textContent = `${isCountdown(record) ? '【倒数】' : '【生日】'}${record.name}`;
         const detail = document.createElement('p'); detail.className = 'birthday-detail';
-        const birth = !isCountdown(record) && record.calendar === 'lunar' ? `农历 ${record.lunar.year} 年${record.lunar.leap ? '闰' : ''}${monthNames[record.lunar.month - 1]} ${record.lunar.day} 日（公历 ${record.date}）` : `公历 ${record.date}`;
+        const birth = !isCountdown(record) && record.calendar === 'lunar' ? `农历 ${record.lunar.year} 年${record.lunar.leap ? '闰' : ''}${monthNames[record.lunar.month - 1]} ${record.lunar.day} 日（公历 ${displayDate(record.date)}）` : `公历 ${displayDate(record.date)}`;
         const email = isCountdown(record) ? record.emailReminder === true : record.emailReminder !== false;
-        detail.textContent = isCountdown(record) ? `目标日期：${record.date} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'}` : `出生日期：${birth} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'} · ${record.reminder ? '日历提醒已选（需下载导入）' : '日历提醒未开启'}`;
+        detail.textContent = isCountdown(record) ? `目标日期：${displayDate(record.date)} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'}` : `出生日期：${birth} · ${email ? '邮件提醒已开启' : '邮件提醒已关闭'} · ${record.reminder ? '日历提醒已选（需下载导入）' : '日历提醒未开启'}`;
         const countdown = document.createElement('span'); countdown.className = 'birthday-countdown';
-        countdown.textContent = record.next.days < 0 ? `已过去 ${-record.next.days} 天` : record.next.days === 0 ? (isCountdown(record) ? '就是今天！' : '今天生日，记得送上祝福！') : `${record.next.date} · 还有 ${record.next.days} 天`;
+        countdown.textContent = `${displayDate(record.next.date)} · ${record.next.days < 0 ? `已过去 ${-record.next.days} 天` : record.next.days === 0 ? (isCountdown(record) ? '就是今天！' : '今天生日，记得送上祝福！') : `还有 ${record.next.days} 天`}`;
         info.append(name, detail, countdown);
         const actions = document.createElement('div'); actions.className = 'birthday-actions';
         actions.append(button('编辑', () => {
@@ -224,6 +231,7 @@
   updateMonths(); conversion();
   $('birthday-kind').addEventListener('change', () => { conversion(); controls(); });
   $('birthday-calendar-type').addEventListener('change', conversion);
+  $('birthday-date').addEventListener('input', conversion);
   $('birthday-lunar-year').addEventListener('change', updateMonths);
   $('birthday-lunar-month').addEventListener('change', updateDays);
   $('birthday-lunar-day').addEventListener('change', conversion);
