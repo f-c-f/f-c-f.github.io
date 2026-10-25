@@ -27,7 +27,7 @@ main:
     url: /cv/
 
   - title: "Tools"
-    url: /subsystem/
+    url: https://api.buaalwc.vip/subsystem/
     
   # - title: "CV"
   #   url: /cv-json/
